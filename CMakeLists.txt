@@ -5,10 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 
 # 添加子目录和头文件路径
 add_subdirectory(lib)
+include_directories(extern/)
 add_subdirectory(extern/glfw)
 include_directories(extern/glfw/include)
 include_directories(extern/glm)
-include_directories(extern/glad/include)
+include_directories(extern/glad/include/)
 include_directories(extern/imgui)
 include_directories(include/)
 
@@ -21,6 +22,11 @@ add_library(imgui STATIC ${IMGUI_SOURCES})
 # 创建静态库
 file(GLOB LIB_SOURCES
     src/Application.cpp
+    src/Object.cpp
+    src/Shader.cpp
+    src/Scene.cpp
+    src/Camera.cpp
+    src/InputController.cpp
 )
 
 add_library(ViewerLib STATIC ${LIB_SOURCES})
