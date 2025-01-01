@@ -1,8 +1,23 @@
-#include <Scene.h>
-#include <Shader.h>
+#include <vector>
+#include <string>
+#include <memory>
 
-Scene::Scene(/* args */)
-    : sceneName("Default Scene Name")
+#include <Object.h>
+#include <Camera.h>
+#include <Scene.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+Scene::Scene()
+    : m_sceneName("Default Scene Name")
+{
+}
+
+Scene::Scene(const std::string &name)
+    : m_sceneName(name)
 {
 }
 
@@ -12,9 +27,80 @@ Scene::~Scene()
 
 void Scene::draw()
 {
-    for (auto obj : Objects)
+    for (auto &obj : m_Objects)
     {
-        obj.draw();
+        auto shader = obj->getShader();
+        shader->use();
+        auto view = m_camera.getViewMatrix();
+        auto projection = m_camera.getProjectionMatrix();
 
+        shader->setUniform("uView", view);
+        shader->setUniform("uProjection", projection);
+
+        obj->draw();
     }
+}
+
+void Scene::addObject(std::shared_ptr<Object> obj)
+{
+    m_Objects.push_back(obj);
+}
+
+void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &groundColor)
+{
+    m_Objects[0]->getShader()->setUniform("drawmode", 1);
+    // 绘制纯色背景作为天空
+    glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // 定义地面顶点数据
+    float groundVertices[] = {
+        -50.0f, -2.0f, -50.0f, // 左下角
+        50.0f, -2.0f, -50.0f,  // 右下角
+        50.0f, -2.0f, 50.0f,   // 右上角
+
+        -50.0f, -2.0f, -50.0f, // 左下角
+        50.0f, -2.0f, 50.0f,   // 右上角
+        -50.0f, -2.0f, 50.0f   // 左上角
+    };
+
+    // 定义地面颜色
+    float groundColors[] = {
+        groundColor.r, groundColor.g, groundColor.b,
+        groundColor.r, groundColor.g, groundColor.b,
+        groundColor.r, groundColor.g, groundColor.b,
+
+        groundColor.r, groundColor.g, groundColor.b,
+        groundColor.r, groundColor.g, groundColor.b,
+        groundColor.r, groundColor.g, groundColor.b};
+
+    GLuint VAO, VBO, CBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &CBO);
+
+    // 设置 VAO
+    glBindVertexArray(VAO);
+
+    // 顶点缓冲
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+
+    // 颜色缓冲
+    glBindBuffer(GL_ARRAY_BUFFER, CBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(groundColors), groundColors, GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(1);
+
+    // 绘制地面
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    // 清理
+    glBindVertexArray(0);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &CBO);
+    glDeleteVertexArrays(1, &VAO);
 }

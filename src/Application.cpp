@@ -1,16 +1,19 @@
 #include <vector>
 #include <string>
-#include <Scene.h>
-#include <Application.h>
 #include <stdexcept>
 #include <cmath>
-#include <Shader.h>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include <Scene.h>
+#include <Application.h>
 #include <Camera.h>
 #include <InputController.h>
+#include <Shader.h>
 
 #include <Mesh.h>
+#include <iostream>
 
 Application::Application()
     : m_title("Default Title"), m_width(800), m_height(450), m_Scenes(2)
@@ -68,60 +71,69 @@ void Application::bindInputController()
 
 void Application::run()
 {
-    Camera mainCamera;
+    Scene scene;
+    Camera &mainCamera = scene.getCamera();
     m_inputController.setCamera(&mainCamera);
     mainCamera.setAspect(m_width / m_height);
 
     Mesh mesh(10, SPHERE);
-    Object obj;
-    obj.loadFromMesh(mesh);
-    obj.setDrawMode(DrawMode::WIREFRAME);
 
-    Shader shader;
-    shader.loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
-    obj.attachShader(shader);
-    auto model = obj.getModelMatrix();
-    shader.use();
+    auto shader = std::make_shared<Shader>();
+    shader->loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
+    shader->use();
+
+    auto obj = std::make_shared<Object>();
+    obj->loadFromMesh(mesh);
+    obj->setDrawMode(DrawMode::WIREFRAME);
+    obj->attachShader(shader);
+    auto model = obj->getModelMatrix();
+
+    auto obj2 = std::make_shared<Object>();
+    obj2->loadFromMesh(mesh);
+    obj2->setDrawMode(DrawMode::WIREFRAME);
+    obj2->setScale(glm::vec3(2.0f, 1.0f, 0.5f));
+    obj2->attachShader(shader);
+
+    scene.addObject(obj);
+    scene.addObject(obj2);
+
     float lastTime = glfwGetTime();
 
-    Object obj2(obj);
-    obj2.setScale(glm::vec3(2.0f, 1.0f, 0.5f));
+    // // 设置天空和地面的颜色
+    // const glm::vec4 skyColor(0.529f, 0.808f, 0.922f, 1.0f);    // 淡蓝色天空
+    // const glm::vec4 groundColor(0.933f, 0.867f, 0.510f, 1.0f); // 淡黄色地面
 
-    // 设置天空和地面的颜色
-    const glm::vec4 skyColor(0.529f, 0.808f, 0.922f, 1.0f);    // 淡蓝色天空
-    const glm::vec4 groundColor(0.933f, 0.867f, 0.510f, 1.0f); // 淡黄色地面
+    // GLuint groundVAO, groundVBO;
+    // GLfloat groundVertices[] = {
+    //     // 顶点位置             // 颜色
+    //     -100.0f, -2.0f, -100.0f, groundColor.r, groundColor.g, groundColor.b,
+    //     100.0f, -2.0f, -100.0f, groundColor.r, groundColor.g, groundColor.b,
+    //     100.0f, -2.0f, 100.0f, groundColor.r, groundColor.g, groundColor.b,
+    //     -100.0f, -2.0f, 100.0f, groundColor.r, groundColor.g, groundColor.b};
+    // GLuint groundIndices[] = {
+    //     0, 1, 2,
+    //     2, 3, 0};
 
-    GLuint groundVAO, groundVBO;
-    GLfloat groundVertices[] = {
-        // 顶点位置             // 颜色
-        -100.0f, -2.0f, -100.0f, groundColor.r, groundColor.g, groundColor.b,
-        100.0f, -2.0f, -100.0f, groundColor.r, groundColor.g, groundColor.b,
-        100.0f, -2.0f, 100.0f, groundColor.r, groundColor.g, groundColor.b,
-        -100.0f, -2.0f, 100.0f, groundColor.r, groundColor.g, groundColor.b};
-    GLuint groundIndices[] = {
-        0, 1, 2,
-        2, 3, 0};
+    // glGenVertexArrays(1, &groundVAO);
+    // glGenBuffers(1, &groundVBO);
 
-    glGenVertexArrays(1, &groundVAO);
-    glGenBuffers(1, &groundVBO);
+    // glBindVertexArray(groundVAO);
 
-    glBindVertexArray(groundVAO);
+    // glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+    // GLuint groundEBO;
+    // glGenBuffers(1, &groundEBO);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundEBO);
+    // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), groundIndices, GL_STATIC_DRAW);
 
-    GLuint groundEBO;
-    glGenBuffers(1, &groundEBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), groundIndices, GL_STATIC_DRAW);
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void *)0);
+    // glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
+    // glEnableVertexAttribArray(1);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void *)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glBindVertexArray(0);
 
     while (!glfwWindowShouldClose(m_window))
     {
@@ -131,42 +143,41 @@ void Application::run()
         lastTime = time;
         m_inputController.update(deltaTime);
 
-        // 设置 OpenGL 的背景颜色为天空颜色
-        glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // // 设置 OpenGL 的背景颜色为天空颜色
+        // glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        auto view = mainCamera.getViewMatrix();
-        auto projection = mainCamera.getProjectionMatrix();
+        // auto view = mainCamera.getViewMatrix();
+        // auto projection = mainCamera.getProjectionMatrix();
 
-        shader.setUniform("uView", view);
-        shader.setUniform("uModel", model);
-        shader.setUniform("uProjection", projection);
+        // shader->setUniform("uView", view);
+        // shader->setUniform("uModel", model);
+        // shader->setUniform("uProjection", projection);
 
-        // 绘制地面
-        // glDisable(GL_DEPTH_TEST);
-        shader.setUniform("drawmode", 1);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // 设置地面为填充模式
-        glBindVertexArray(groundVAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glEnable(GL_DEPTH_TEST);
+        // // 绘制地面
+        // // glDisable(GL_DEPTH_TEST);
+        // shader->setUniform("drawmode", 1);
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // 设置地面为填充模式
+        // glBindVertexArray(groundVAO);
+        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // glEnable(GL_DEPTH_TEST);
 
-        // 使用 glm 的三角函数计算位置
-        float x = 2.0f * glm::cos(time); // X 位置随着时间变化
-        float y = 1.0f * glm::sin(time); // Y 位置随着时间变化
-        float z = 0.0f;                  // Z 位置保持不变
+        // // 使用 glm 的三角函数计算位置
+        // float x = 2.0f * glm::cos(time); // X 位置随着时间变化
+        // float y = 1.0f * glm::sin(time); // Y 位置随着时间变化
+        // float z = 0.0f;                  // Z 位置保持不变
 
-        // 更新对象位置
-        obj2.setPosition(glm::vec3(x, y, z));
+        scene.drawBackgroundAndGround(glm::vec4(0.529f, 0.808f, 0.922f, 1.0f),  // 天空颜色（淡蓝色）
+                                      glm::vec3(0.752f, 0.752f, 0.752f)); // 地面颜色（淡灰色）)
 
-        obj.draw();
-        obj2.draw();
+        scene.draw();
 
         glfwSwapBuffers(m_window);
     }
 
-    glDeleteVertexArrays(1, &groundVAO);
-    glDeleteBuffers(1, &groundVBO);
-    glDeleteBuffers(1, &groundEBO);
+    // glDeleteVertexArrays(1, &groundVAO);
+    // glDeleteBuffers(1, &groundVBO);
+    // glDeleteBuffers(1, &groundEBO);
 }
 
 void Application::initializeGLFWAndGLAD()

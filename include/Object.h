@@ -8,6 +8,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <Shader.h>
+#include <memory>
 
 #include <Mesh.h>
 
@@ -46,8 +47,8 @@ public:
     glm::mat4 getModelMatrix();
 
     void loadFromMesh(const Mesh &mesh);
-    void attachShader(const Shader &sdr);
-    const Shader *getShader();
+    void attachShader(const std::shared_ptr<Shader> &sdr) { shader = sdr; }
+    std::shared_ptr<Shader> getShader() const { return shader; }
 
     void setDrawMode(DrawMode mode);
     DrawMode getDrawMode() const;
@@ -63,7 +64,7 @@ private:
     glm::mat4 modelMatrix;
     bool shouldUpdateModelMatrix;
 
-    const Shader *shader;
+    std::shared_ptr<Shader> shader;
     DrawMode drawmode;
     ObjectType objecttype;
 

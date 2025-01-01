@@ -11,7 +11,7 @@
 
 Object::Object()
     : position(0.0f, 0.0f, 0.0f), rotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)),
-      scale(1.0f, 1.0f, 1.0f), shouldUpdateModelMatrix(true), shader(nullptr),
+      scale(1.0f, 1.0f, 1.0f), shouldUpdateModelMatrix(true),
       drawmode(DrawMode::FILL), objecttype(ObjectType::SEMI_STATIC)
 {
     glGenVertexArrays(1, &VAO);
@@ -78,16 +78,6 @@ void Object::loadFromMesh(const Mesh &mesh)
     }
 
     uploadToBuffer();
-}
-
-void Object::attachShader(const Shader &sdr)
-{
-    shader = &sdr;
-}
-
-const Shader *Object::getShader()
-{
-    return shader;
 }
 
 void Object::setDrawMode(DrawMode mode)
@@ -216,7 +206,6 @@ void Object::drawFill()
 
 void Object::draw()
 {
-    shader->use();
     glm::mat4 model = getModelMatrix();
     shader->setUniform("uModel", model);
 
