@@ -3,6 +3,8 @@ project(Viewer)
 
 set(CMAKE_CXX_STANDARD 17)
 
+find_package(OpenMP REQUIRED)
+
 # 添加子目录和头文件路径
 add_subdirectory(lib)
 include_directories(extern/)
@@ -52,4 +54,7 @@ target_link_libraries(test
     imgui
     ${CMAKE_DL_LIBS}
     Lib
+    OpenMP::OpenMP_CXX
 )
+
+target_compile_options(test PRIVATE -O3 -ffast-math -fopenmp)

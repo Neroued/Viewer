@@ -6,6 +6,7 @@
 
 #include <Object.h>
 #include <Camera.h>
+#include <ObjectController.h>
 
 class Scene
 {
@@ -13,6 +14,7 @@ private:
     std::string m_sceneName;
     Camera m_camera;
     std::vector<std::shared_ptr<Object>> m_Objects;
+    std::vector<std::shared_ptr<ObjectController>> m_controllers;
 
 public:
     Scene();
@@ -24,6 +26,9 @@ public:
 
     void draw();
     void addObject(std::shared_ptr<Object> obj);
+
+    void addController(std::shared_ptr<ObjectController> ctrl);
+    void updateObjects(double dt);
 
     Camera &getCamera() { return m_camera; };
 

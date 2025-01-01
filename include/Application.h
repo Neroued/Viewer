@@ -14,16 +14,22 @@ public:
     Application();
     ~Application();
 
+    void addScene(std::shared_ptr<Scene> scene) { m_Scenes.push_back(scene); }
+    void changeScene(int k);
+
+    void onFramebufferSize(int width, int height);
+    
     void run();
 private:
-    void initializeGLFWAndGLAD();
-
-    GLFWwindow *m_window;
     std::string m_title;
     float m_width, m_height;
-    std::vector<Scene> m_Scenes;
+    GLFWwindow *m_window;
+    std::vector<std::shared_ptr<Scene>> m_Scenes;
+    int currentScene;
 
     InputController m_inputController;
 
+    void initializeGLFWAndGLAD();
     void bindInputController();
+    void setInputControllerCamera();
 };

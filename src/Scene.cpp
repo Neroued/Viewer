@@ -46,6 +46,19 @@ void Scene::addObject(std::shared_ptr<Object> obj)
     m_Objects.push_back(obj);
 }
 
+void Scene::addController(std::shared_ptr<ObjectController> ctrl)
+{
+    m_controllers.push_back(ctrl);
+}
+
+void Scene::updateObjects(double dt)
+{
+    for (auto &ctrl : m_controllers)
+    {
+        ctrl->update(dt);
+    }
+}
+
 void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &groundColor)
 {
     m_Objects[0]->getShader()->setUniform("drawmode", 1);
