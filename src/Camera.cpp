@@ -12,7 +12,7 @@ Camera::Camera()
       m_aspect(16.0f / 9.0f),
       m_nearPlane(0.1f),
       m_farPlane(100.0f),
-      m_minFov(1.0f),
+      m_minFov(10.0f),
       m_maxFov(90.0f)
 {
 }

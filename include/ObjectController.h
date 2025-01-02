@@ -1,5 +1,10 @@
 #pragma once
 
+/* 对Object的状态进行更新的Controller
+ * 每个ObjectController绑定一个Object
+ * 这是一个基类，通过继承可以派生不同类型的ObjectController
+ */
+
 #include <memory>
 #include <Object.h>
 

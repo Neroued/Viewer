@@ -1,6 +1,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+/* 统一管理响应用户输入的控制器
+ * 目前将用户的输入转换为相机视角的变化
+ */
+
 #include <Camera.h>
 #include <unordered_map>
 

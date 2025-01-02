@@ -1,6 +1,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+/* 一个基本的着色器类，提供加载与设置着色器的方法
+ * 将来可以在此基础上设计ShaderManager，统一管理各种着色器
+ */
+
 #include <string>
 #include <glad/glad.h>
 #include <glm/gtc/type_ptr.hpp>

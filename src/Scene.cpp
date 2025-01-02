@@ -14,7 +14,7 @@
 Scene::Scene()
     : m_sceneName("Default Scene Name")
 {
-    backgroundShader.loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
+    m_backgroundShader.loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 }
 
 Scene::Scene(const std::string &name)
@@ -62,8 +62,8 @@ void Scene::updateObjects(double dt)
 
 void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &groundColor)
 {
-    backgroundShader.use();
-    backgroundShader.setUniform("drawmode", 1);
+    m_backgroundShader.use();
+    m_backgroundShader.setUniform("drawmode", 1);
 
     // 绘制纯色背景作为天空
     glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
@@ -73,13 +73,13 @@ void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
     model = glm::scale(model, glm::vec3(50.0f, 1.0f, 50.0f));
-    backgroundShader.setUniform("uModel", model);
+    m_backgroundShader.setUniform("uModel", model);
 
     auto view = m_camera.getViewMatrix();
     auto projection = m_camera.getProjectionMatrix();
 
-    backgroundShader.setUniform("uView", view);
-    backgroundShader.setUniform("uProjection", projection);
+    m_backgroundShader.setUniform("uView", view);
+    m_backgroundShader.setUniform("uProjection", projection);
 
     // 定义地面顶点数据
     float groundVertices[] = {

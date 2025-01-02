@@ -1,5 +1,14 @@
 #pragma once
 
+/* 场景类
+ * 拥有相机、对象、对象控制器等内容
+ * 统一管理场景中的所有对象与对应的控制器
+ * 从架构分层的角度来说，是Object的上一级，Application的下一级
+ * 通过调用对象控制器的update方法更新对象的状态
+ * 为Object对象的draw方法提供合适的opengl语境，并绘制这些对象
+ * 可增加功能：根据相机视角剔除在视角外的对象
+ */
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -17,7 +26,7 @@ private:
     std::vector<std::shared_ptr<Object>> m_Objects;
     std::vector<std::shared_ptr<ObjectController>> m_controllers;
 
-    Shader backgroundShader;
+    Shader m_backgroundShader;
 
 public:
     Scene();

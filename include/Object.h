@@ -1,6 +1,13 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+/* Object渲染对象
+ * 是渲染架构中最小的组成单元
+ * 通过DrawMode和ObjectType来区分不同对象类型，进行不同的渲染方式
+ * 需要设置好对应的shader
+ * draw()方法需要在上一级Scene提供的语境中使用，即需要设置好相机相关的数据
+ */
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -55,7 +62,7 @@ public:
     void setObjectType(ObjectType type);
     ObjectType getObjectType() const;
 
-    void draw();
+    void draw(); // 需要在上一级Scene提供的语境中使用
 
 private:
     glm::vec3 position;
@@ -64,7 +71,7 @@ private:
     glm::mat4 modelMatrix;
     bool shouldUpdateModelMatrix;
 
-    std::shared_ptr<Shader> shader;
+    std::shared_ptr<Shader> shader; // 使用的shader，可与其他对象共享
     DrawMode drawmode;
     ObjectType objecttype;
 

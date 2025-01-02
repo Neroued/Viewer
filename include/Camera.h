@@ -1,6 +1,10 @@
 #pragma once
 #define GLM_ENABLE_EXPERIMENTAL
 
+/* 第一人称自由相机
+ * 使用四元数处理旋转
+ */
+
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
