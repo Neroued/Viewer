@@ -108,7 +108,7 @@ void Camera::moveRight(float distance)
 
 void Camera::moveUp(float distance)
 {
-    glm::vec3 up = glm::rotate(m_orientation, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 up(0.0f, 1.0f, 0.0f);
     m_position += up * distance;
 }
 
