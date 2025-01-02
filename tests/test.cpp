@@ -189,16 +189,35 @@ int main()
     scene->addObject(obj);
     scene->addObject(obj2);
 
+    // 创建大量对象
+    int n = 100;
+    for (int i = 0; i < n; ++i)
+    {
+        auto obj = std::make_shared<Object>();
+        obj->setObjectType(ObjectType::STATIC);
+        obj->loadFromMesh(mesh);
+        obj->setDrawMode(DrawMode::WIREFRAME);
+        obj->attachShader(shader);
+        obj->setPosition(glm::vec3(2.0f, (float)(i), 2.0f));
+        scene->addObject(obj);
+    }
+
     // 创建NS对象
     auto obj3 = std::make_shared<Object>();
-    std::shared_ptr<ObjectController> nsController = std::make_shared<NSController>(80, SPHERE, obj3);
+    std::shared_ptr<ObjectController> nsController = std::make_shared<NSController>(100, SPHERE, obj3);
     obj3->setPosition(glm::vec3(-2.0f, 0.0f, 2.0f));
     obj3->attachShader(shader);
     scene->addObject(obj3);
     scene->addController(nsController);
 
-    app.addScene(scene);
+    // auto obj4 = std::make_shared<Object>();
+    // std::shared_ptr<ObjectController> nsController2 = std::make_shared<NSController>(100, SPHERE, obj4);
+    // obj4->setPosition(glm::vec3(-2.0f, 0.0f, 4.0f));
+    // obj4->attachShader(shader);
+    // scene->addObject(obj4);
+    // scene->addController(nsController2);
 
+    app.addScene(scene);
     app.run();
 
     return 0;

@@ -14,6 +14,7 @@
 Scene::Scene()
     : m_sceneName("Default Scene Name")
 {
+    backgroundShader.loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 }
 
 Scene::Scene(const std::string &name)
@@ -61,20 +62,34 @@ void Scene::updateObjects(double dt)
 
 void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &groundColor)
 {
-    m_Objects[0]->getShader()->setUniform("drawmode", 1);
+    backgroundShader.use();
+    backgroundShader.setUniform("drawmode", 1);
+
     // 绘制纯色背景作为天空
     glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // 定义地面模型矩阵
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(50.0f, 1.0f, 50.0f));
+    backgroundShader.setUniform("uModel", model);
+
+    auto view = m_camera.getViewMatrix();
+    auto projection = m_camera.getProjectionMatrix();
+
+    backgroundShader.setUniform("uView", view);
+    backgroundShader.setUniform("uProjection", projection);
+
     // 定义地面顶点数据
     float groundVertices[] = {
-        -50.0f, -2.0f, -50.0f, // 左下角
-        50.0f, -2.0f, -50.0f,  // 右下角
-        50.0f, -2.0f, 50.0f,   // 右上角
+        -1.0f, 0.0f, -1.0f, // 左下角
+        1.0f, 0.0f, -1.0f,  // 右下角
+        1.0f, 0.0f, 1.0f,   // 右上角
 
-        -50.0f, -2.0f, -50.0f, // 左下角
-        50.0f, -2.0f, 50.0f,   // 右上角
-        -50.0f, -2.0f, 50.0f   // 左上角
+        -1.0f, 0.0f, -1.0f, // 左下角
+        1.0f, 0.0f, 1.0f,   // 右上角
+        -1.0f, 0.0f, 1.0f   // 左上角
     };
 
     // 定义地面颜色

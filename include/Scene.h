@@ -7,6 +7,7 @@
 #include <Object.h>
 #include <Camera.h>
 #include <ObjectController.h>
+#include <Shader.h>
 
 class Scene
 {
@@ -15,6 +16,8 @@ private:
     Camera m_camera;
     std::vector<std::shared_ptr<Object>> m_Objects;
     std::vector<std::shared_ptr<ObjectController>> m_controllers;
+
+    Shader backgroundShader;
 
 public:
     Scene();

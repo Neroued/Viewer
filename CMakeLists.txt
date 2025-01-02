@@ -57,4 +57,4 @@ target_link_libraries(test
     OpenMP::OpenMP_CXX
 )
 
-target_compile_options(test PRIVATE -O3 -ffast-math -fopenmp)
+target_compile_options(test PRIVATE -ffast-math -fopenmp)
