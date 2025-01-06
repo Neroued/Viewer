@@ -1,21 +1,20 @@
 #include <Camera.h>
 #include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <stdexcept>
 
 Camera::Camera()
-    : m_position(0.0f, 0.0f, 3.0f),
-      m_orientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)),
-      m_fov(45.0f),
-      m_aspect(16.0f / 9.0f),
-      m_nearPlane(0.1f),
-      m_farPlane(100.0f),
-      m_minFov(10.0f),
-      m_maxFov(90.0f)
-{
-}
+    : m_position(0.0f, 0.0f, 3.0f)
+    , m_orientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
+    , m_fov(45.0f)
+    , m_aspect(16.0f / 9.0f)
+    , m_nearPlane(0.1f)
+    , m_farPlane(100.0f)
+    , m_minFov(10.0f)
+    , m_maxFov(90.0f)
+{}
 
 Camera::Camera(const glm::vec3 &position,
                const glm::quat &orientation,
@@ -23,18 +22,18 @@ Camera::Camera(const glm::vec3 &position,
                float aspect,
                float nearPlane,
                float farPlane)
-    : m_position(position),
-      m_orientation(orientation),
-      m_fov(fov),
-      m_aspect(aspect),
-      m_nearPlane(nearPlane),
-      m_farPlane(farPlane),
-      m_minFov(1.0f),
-      m_maxFov(90.0f)
+    : m_position(position)
+    , m_orientation(orientation)
+    , m_fov(fov)
+    , m_aspect(aspect)
+    , m_nearPlane(nearPlane)
+    , m_farPlane(farPlane)
+    , m_minFov(1.0f)
+    , m_maxFov(90.0f)
 {
-    if (m_nearPlane <= 0.0f || m_farPlane <= m_nearPlane)
-    {
-        throw std::invalid_argument("Invalid clipping planes: nearPlane must be positive and less than farPlane.");
+    if (m_nearPlane <= 0.0f || m_farPlane <= m_nearPlane) {
+        throw std::invalid_argument(
+            "Invalid clipping planes: nearPlane must be positive and less than farPlane.");
     }
 }
 
@@ -65,8 +64,7 @@ void Camera::setFOV(float fov)
 
 void Camera::setAspect(float aspect)
 {
-    if (aspect <= 0.0f)
-    {
+    if (aspect <= 0.0f) {
         throw std::invalid_argument("Aspect ratio must be positive.");
     }
     m_aspect = aspect;
@@ -74,9 +72,9 @@ void Camera::setAspect(float aspect)
 
 void Camera::setClippingPlanes(float nearPlane, float farPlane)
 {
-    if (nearPlane <= 0.0f || farPlane <= nearPlane)
-    {
-        throw std::invalid_argument("Invalid clipping planes: nearPlane must be positive and less than farPlane.");
+    if (nearPlane <= 0.0f || farPlane <= nearPlane) {
+        throw std::invalid_argument(
+            "Invalid clipping planes: nearPlane must be positive and less than farPlane.");
     }
     m_nearPlane = nearPlane;
     m_farPlane = farPlane;

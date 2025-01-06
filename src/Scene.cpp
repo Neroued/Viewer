@@ -1,15 +1,15 @@
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
-#include <Object.h>
 #include <Camera.h>
+#include <Object.h>
 #include <Scene.h>
 
 #include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 Scene::Scene()
     : m_sceneName("Default Scene Name")
@@ -19,17 +19,13 @@ Scene::Scene()
 
 Scene::Scene(const std::string &name)
     : m_sceneName(name)
-{
-}
+{}
 
-Scene::~Scene()
-{
-}
+Scene::~Scene() {}
 
 void Scene::draw()
 {
-    for (auto &obj : m_Objects)
-    {
+    for (auto &obj : m_Objects) {
         auto shader = obj->getShader();
         shader->use();
         auto view = m_camera.getViewMatrix();
@@ -54,8 +50,7 @@ void Scene::addController(std::shared_ptr<ObjectController> ctrl)
 
 void Scene::updateObjects(double dt)
 {
-    for (auto &ctrl : m_controllers)
-    {
+    for (auto &ctrl : m_controllers) {
         ctrl->update(dt);
     }
 }
@@ -83,24 +78,47 @@ void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &
 
     // 定义地面顶点数据
     float groundVertices[] = {
-        -1.0f, 0.0f, -1.0f, // 左下角
-        1.0f, 0.0f, -1.0f,  // 右下角
-        1.0f, 0.0f, 1.0f,   // 右上角
+        -1.0f,
+        0.0f,
+        -1.0f, // 左下角
+        1.0f,
+        0.0f,
+        -1.0f, // 右下角
+        1.0f,
+        0.0f,
+        1.0f, // 右上角
 
-        -1.0f, 0.0f, -1.0f, // 左下角
-        1.0f, 0.0f, 1.0f,   // 右上角
-        -1.0f, 0.0f, 1.0f   // 左上角
+        -1.0f,
+        0.0f,
+        -1.0f, // 左下角
+        1.0f,
+        0.0f,
+        1.0f, // 右上角
+        -1.0f,
+        0.0f,
+        1.0f // 左上角
     };
 
     // 定义地面颜色
-    float groundColors[] = {
-        groundColor.r, groundColor.g, groundColor.b,
-        groundColor.r, groundColor.g, groundColor.b,
-        groundColor.r, groundColor.g, groundColor.b,
+    float groundColors[] = {groundColor.r,
+                            groundColor.g,
+                            groundColor.b,
+                            groundColor.r,
+                            groundColor.g,
+                            groundColor.b,
+                            groundColor.r,
+                            groundColor.g,
+                            groundColor.b,
 
-        groundColor.r, groundColor.g, groundColor.b,
-        groundColor.r, groundColor.g, groundColor.b,
-        groundColor.r, groundColor.g, groundColor.b};
+                            groundColor.r,
+                            groundColor.g,
+                            groundColor.b,
+                            groundColor.r,
+                            groundColor.g,
+                            groundColor.b,
+                            groundColor.r,
+                            groundColor.g,
+                            groundColor.b};
 
     GLuint VAO, VBO, CBO;
     glGenVertexArrays(1, &VAO);
@@ -113,13 +131,13 @@ void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &
     // 顶点缓冲
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(0);
 
     // 颜色缓冲
     glBindBuffer(GL_ARRAY_BUFFER, CBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(groundColors), groundColors, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
     glEnableVertexAttribArray(1);
 
     // 绘制地面

@@ -1,18 +1,21 @@
-#include <Object.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <Object.h>
+#include <cstring>
 #include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <cstring>
+#include <glm/gtx/quaternion.hpp>
 
 #include <Mesh.h>
 
 Object::Object()
-    : position(0.0f, 0.0f, 0.0f), rotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f)),
-      scale(1.0f, 1.0f, 1.0f), shouldUpdateModelMatrix(true),
-      drawmode(DrawMode::FILL), objecttype(ObjectType::SEMI_STATIC)
+    : position(0.0f, 0.0f, 0.0f)
+    , rotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
+    , scale(1.0f, 1.0f, 1.0f)
+    , shouldUpdateModelMatrix(true)
+    , drawmode(DrawMode::FILL)
+    , objecttype(ObjectType::SEMI_STATIC)
 {
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -32,8 +35,7 @@ void Object::updateModelMatrix()
 
 glm::mat4 Object::getModelMatrix()
 {
-    if (shouldUpdateModelMatrix)
-    {
+    if (shouldUpdateModelMatrix) {
         updateModelMatrix();
         shouldUpdateModelMatrix = false;
     }
@@ -65,15 +67,13 @@ void Object::loadFromMesh(const Mesh &mesh)
     indices.resize(mesh.indices.size);
 
     std::size_t k = 0;
-    for (std::size_t i = 0; i < mesh.vertices.size; ++i)
-    {
-        vertices[k++] = (float)mesh.vertices[i].x;
-        vertices[k++] = (float)mesh.vertices[i].y;
-        vertices[k++] = (float)mesh.vertices[i].z;
+    for (std::size_t i = 0; i < mesh.vertices.size; ++i) {
+        vertices[k++] = (float) mesh.vertices[i].x;
+        vertices[k++] = (float) mesh.vertices[i].y;
+        vertices[k++] = (float) mesh.vertices[i].z;
     }
 
-    for (std::size_t i = 0; i < mesh.indices.size; ++i)
-    {
+    for (std::size_t i = 0; i < mesh.indices.size; ++i) {
         indices[i] = mesh.indices[i];
     }
 
@@ -104,9 +104,10 @@ void Object::uploadVertex()
 {
     // 上传顶点数据到 VBO
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW; // 动态或静态
+    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW
+                                                       : GL_STATIC_DRAW; // 动态或静态
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), usage);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
     glEnableVertexAttribArray(0); // 位置属性：location = 0
 }
 
@@ -114,26 +115,29 @@ void Object::uploadElement()
 {
     // 索引数据绑定 EBO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW; // 动态或静态
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), usage);
+    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW
+                                                       : GL_STATIC_DRAW; // 动态或静态
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 indices.size() * sizeof(unsigned int),
+                 indices.data(),
+                 usage);
 }
 
 void Object::uploadColorBuffer()
 {
     // 上传颜色数据到 colorVBO
     glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-    if (colorBuffer.empty())
-    {
+    if (colorBuffer.empty()) {
         // 如果 colorBuffer 为空，上传一个默认的颜色数据
         float defaultColor[3] = {0.0f, 0.0f, 0.0f};
         glBufferData(GL_ARRAY_BUFFER, sizeof(defaultColor), defaultColor, GL_STATIC_DRAW);
-    }
-    else
-    {
-        GLenum usage = (objecttype == ObjectType::DYNAMIC || objecttype == ObjectType::SEMI_STATIC) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+    } else {
+        GLenum usage = (objecttype == ObjectType::DYNAMIC || objecttype == ObjectType::SEMI_STATIC)
+                           ? GL_DYNAMIC_DRAW
+                           : GL_STATIC_DRAW;
         glBufferData(GL_ARRAY_BUFFER, colorBuffer.size() * sizeof(float), colorBuffer.data(), usage);
     }
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
     glEnableVertexAttribArray(1); // 颜色属性：location = 1
 }
 
@@ -157,7 +161,10 @@ void Object::updateVertex()
 void Object::updateElement()
 {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(unsigned int), indices.data());
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,
+                    0,
+                    indices.size() * sizeof(unsigned int),
+                    indices.data());
 }
 
 void Object::updateColorBuffer()
@@ -168,8 +175,7 @@ void Object::updateColorBuffer()
 
 void Object::updateBuffer()
 {
-    switch (objecttype)
-    {
+    switch (objecttype) {
     case ObjectType::STATIC:
         break;
 
@@ -213,8 +219,7 @@ void Object::draw()
 
     updateBuffer();
 
-    switch (drawmode)
-    {
+    switch (drawmode) {
     case DrawMode::WIREFRAME:
         drawWireframe();
         break;
