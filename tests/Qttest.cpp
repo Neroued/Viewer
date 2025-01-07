@@ -1,7 +1,6 @@
 #include <QApplication>
 #include "MainWindow.h"
 #include <Object.h>
-#include <Shader.h>
 #include <Scene.h>
 #include <iostream>
 #include <NavierStokesSolver.h>
@@ -168,6 +167,7 @@ int main(int argc, char *argv[])
     format.setVersion(4, 6);                        // 指定 OpenGL 版本，例如 3.3
     format.setProfile(QSurfaceFormat::CoreProfile); // 使用核心配置（或 setProfile(QSurfaceFormat::CompatibilityProfile)）
     format.setDepthBufferSize(24);                  // 设置深度缓冲大小
+    format.setSamples(4);                           // 设置多重采样级别（4x MSAA）
     QSurfaceFormat::setDefaultFormat(format);       // 应用为默认格式
 
     MainWindow mainWindow;
@@ -177,8 +177,10 @@ int main(int argc, char *argv[])
 
     auto gl = mainWindow.getOpenGLWidget();
 
-    auto scene = std::make_shared<Scene>();
+    auto scene = QSharedPointer<Scene>::create();
+    std::cout << "created scene" << std::endl;
     scene->setShaderManager(gl->m_shaderManager);
+    std::cout << "setShaderManager" << std::endl;
 
     Mesh mesh(10, SPHERE);
 

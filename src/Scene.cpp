@@ -1,8 +1,7 @@
 #include "Scene.h"
 #include <QDebug>
 #include <QMatrix4x4>
-#include <QOpenGLExtraFunctions> // 如果需要glPolygonMode或更高级别API
-// #include <QOpenGLBuffer>, <QOpenGLVertexArrayObject> 若你想使用Qt封装buffer
+#include <QOpenGLExtraFunctions> 
 
 #include <iostream>
 
@@ -12,7 +11,7 @@ Scene::Scene()
 }
 
 Scene::Scene(const QString &name)
-    : m_sceneName(name)
+    : m_sceneName(name), m_shaderManager(nullptr), m_backgroundShader(nullptr)
 {
 }
 
@@ -22,6 +21,7 @@ Scene::~Scene()
 
 void Scene::initialize()
 {
+    // 初始化opengl函数，需要依赖现有的opengl context
     initializeOpenGLFunctions();
 
     m_backgroundShader = m_shaderManager->getShader("basic");
@@ -30,8 +30,6 @@ void Scene::initialize()
     {
         obj->initialize();
     }
-
-    std::cout << "Scene initialized" << std::endl;
 }
 
 void Scene::draw()
@@ -75,6 +73,7 @@ void Scene::updateObjects(double dt)
     }
 }
 
+// TODO: 重构绘制背景的部分，创建专门的类或继承Object
 void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &groundColor)
 {
     // 1) 使用 m_backgroundShader
@@ -112,7 +111,7 @@ void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &
     m_backgroundShader->release();
 }
 
-void Scene::setShaderManager(ShaderManager *shaderManager)
+void Scene::setShaderManager(QSharedPointer<ShaderManager> shaderManager)
 {
     m_shaderManager = shaderManager;
 }

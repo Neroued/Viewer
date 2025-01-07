@@ -1,16 +1,11 @@
 #pragma once
 
-/* Application -- Scene -- Object 架构的最顶层
- * 管理窗口指针和场景
- * 功能尚且不完善
- * 迁移到使用Qt
- */
-
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
+#include <QString>
+#include <QSharedPointer>
+#include <QMap>
 #include <vector>
-#include <memory>
-#include <string>
 
 #include <Scene.h>
 #include <InputController.h>
@@ -27,26 +22,26 @@ public:
     explicit OpenGLWidget(QWidget *parent = nullptr);
     ~OpenGLWidget();
 
-    void addScene(std::shared_ptr<Scene> scene) { m_Scenes.push_back(scene); }
-    void changeScene(int k);
+    void addScene(QSharedPointer<Scene> &scene);
+    void changeScene(const QString &name);
     void initializeScenes(); // 在添加场景后，再将场景初始化
 
 protected:
-    void initializeGL() override;                  // Qt初始化OpenGL
+    void initializeGL() override;                  // 在Widget被显示前第一次调用，且只调用一次
     void resizeGL(int width, int height) override; // 窗口大小变化时调用
     void paintGL() override;                       // 每次绘制时调用
 
 private:
-    std::string m_title;
+    QString m_title; 
     float m_width, m_height;
 
-    std::vector<std::shared_ptr<Scene>> m_Scenes;
-    int currentScene;
+    QMap<QString, QSharedPointer<Scene>> m_scenes; // 存储的全部场景
+    QSharedPointer<Scene> m_currentScene;            // 当前场景
 
-    InputController *m_inputController;
+    InputController *m_inputController; // 使用一个inputController来处理鼠标和键盘事件
 
 public:
-    ShaderManager *m_shaderManager;
+    QSharedPointer<ShaderManager> m_shaderManager; // 统一管理所有Shader, 共享给下属的Scene和Object
 
 private:
     // -------------------

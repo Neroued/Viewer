@@ -4,15 +4,7 @@
 #include "Mesh.h" // 如果需要把 Mesh 解析为顶点索引
 
 Object::Object()
-    : m_position(0.0f, 0.0f, 0.0f)
-    , m_rotation()
-    , m_scale(1.0f, 1.0f, 1.0f)
-    , m_shouldUpdateModelMatrix(true)
-    , m_shaderManager(nullptr)
-    , m_shaderName("basic")
-    , m_shader(nullptr)
-    , m_drawMode(DrawMode::FILL)
-    , m_objectType(ObjectType::SEMI_STATIC)
+    : m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f), m_shouldUpdateModelMatrix(true), m_shaderManager(nullptr), m_shaderName("basic"), m_shader(nullptr), m_drawMode(DrawMode::FILL), m_objectType(ObjectType::SEMI_STATIC)
 {
 }
 
@@ -104,11 +96,24 @@ void Object::loadFromMesh(const Mesh &mesh)
 }
 
 void Object::setShader(const QString &shaderName)
-{   
-    m_shaderName = shaderName;
-    if (m_shaderManager)
+{
+
+    if (m_shaderManager) // 表示Object已创建，存在shaderManager
     {
-        m_shader = m_shaderManager->getShader(shaderName);
+        auto s = m_shaderManager->getShader(shaderName);
+        if (s)
+        {
+            m_shader = s;
+            m_shaderName = shaderName;
+        }
+        else
+        {
+            qWarning() << "Warning: Shader name: " << shaderName << " Not Exist!";
+        }
+    }
+    else // 首次创建，还未绑定shaderManager
+    {
+        m_shaderName = shaderName;
     }
 }
 

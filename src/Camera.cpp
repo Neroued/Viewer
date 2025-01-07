@@ -20,6 +20,8 @@ Camera::Camera(const QVector3D &position,
     if (nearPlane <= 0.0f || farPlane <= nearPlane)
     {
         qWarning() << "[Camera] Invalid clipping planes!";
+        m_nearPlane = 0.1f;
+        m_farPlane = 100.0f;
     }
 }
 
@@ -151,10 +153,6 @@ QQuaternion Camera::eulerToQuat(float pitchDeg, float yawDeg, float rollDeg) con
 
 QVector3D Camera::quatToEuler(const QQuaternion &quat) const
 {
-    // QQuaternion::toEulerAngles() 也有类似
-    // 但 Qt 5.15+ 中才有 toEulerAngles()
-    // 在较老版本 Qt 中可能需自己拆解
-    // 这里直接:
     QVector3D euler = quat.toEulerAngles(); // pitch,yaw,roll in degrees
     return euler;
 }

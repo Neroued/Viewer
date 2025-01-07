@@ -15,9 +15,9 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
 #include <QString>
-#include <memory>
 #include <vector>
 
+#include <ObjectController.h>
 #include <ShaderManager.h>
 #include <Mesh.h>
 
@@ -41,6 +41,8 @@ public:
     Object();
     ~Object();
 
+    friend ObjectController; // 声明为友元，允许对应的controller直接修改内部数据
+
     std::size_t getVerticesSize() const { return m_vertices.size(); }
     std::size_t getIndicesSize() const { return m_indices.size(); }
 
@@ -52,7 +54,7 @@ public:
 
     void loadFromMesh(const Mesh &mesh);
 
-    void setShaderManager(ShaderManager *manager) { m_shaderManager = manager; }
+    void setShaderManager(QSharedPointer<ShaderManager> manager) { if (manager) m_shaderManager = manager; }
     void setShader(const QString &shaderName);
     QOpenGLShaderProgram *getShader() const { return m_shader; }
     void setColorBuffer(const std::vector<float> &colorData);
@@ -81,7 +83,7 @@ private:
     QMatrix4x4 m_modelMatrix;
     bool m_shouldUpdateModelMatrix;
 
-    ShaderManager *m_shaderManager;
+    QSharedPointer<ShaderManager> m_shaderManager;
     QString m_shaderName;
     QOpenGLShaderProgram *m_shader; // 使用的shader，可与其他对象共享
     DrawMode m_drawMode;

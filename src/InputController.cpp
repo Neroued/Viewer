@@ -143,10 +143,8 @@ void InputController::handleMouseMove(const QPointF &pos)
     {
         yoffset = -yoffset;
     }
+
     // 旋转
-    // 你原先: camera->rotate( deltaPitch, deltaYaw, 0)
-    //   deltaPitch = -yoffset * m_rotateSpeed
-    //   deltaYaw   = -xoffset * m_rotateSpeed
     if (m_camera)
     {
         m_camera->rotate(-yoffset * m_rotateSpeed,
@@ -173,7 +171,6 @@ void InputController::handleKeyboardMovement(float deltaTime)
         return;
 
     // 构建一个 (x,y,z) 记录WSADQE的位移分量
-    // 这里改用QVector3D
     QVector3D movement(0.0f, 0.0f, 0.0f);
 
     // W S => 前后

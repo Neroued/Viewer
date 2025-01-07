@@ -6,13 +6,7 @@
 #include <QVector3D>
 #include "Camera.h"
 
-/**
- * @brief 在Qt环境下的输入控制器，用于响应键鼠事件并移动/旋转Camera
- * 
- *  - 不再依赖 GLFW_KEY_*、GLFW_PRESS/RELEASE、GLFW_MOUSE_BUTTON_LEFT/RIGHT 等。
- *  - 改用 Qt::Key, Qt::MouseButton, QEvent::Type 等。
- *  - 移除了 glm::vec3，改用 QVector3D 。
- */
+
 class InputController : public QObject
 {
     Q_OBJECT
