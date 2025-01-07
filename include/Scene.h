@@ -1,48 +1,68 @@
 #pragma once
 
-/* 场景类
- * 拥有相机、对象、对象控制器等内容
- * 统一管理场景中的所有对象与对应的控制器
- * 从架构分层的角度来说，是Object的上一级，Application的下一级
- * 通过调用对象控制器的update方法更新对象的状态
- * 为Object对象的draw方法提供合适的opengl语境，并绘制这些对象
- * 可增加功能：根据相机视角剔除在视角外的对象
+#include <QString>
+#include <QVector>
+#include <QSharedPointer>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+
+#include "Camera.h"
+#include "Object.h"
+#include "ObjectController.h"
+#include "ShaderManager.h"
+
+
+/**
+ * @brief 场景类
+ *   - 包含相机、对象、控制器
+ *   - 负责更新和渲染所有对象
+ *   - 可以绘制背景与地面
  */
-
-#include <vector>
-#include <string>
-#include <memory>
-
-#include <Object.h>
-#include <Camera.h>
-#include <ObjectController.h>
-#include <Shader.h>
-
-class Scene
+class Scene : protected QOpenGLFunctions
 {
-private:
-    std::string m_sceneName;
-    Camera m_camera;
-    std::vector<std::shared_ptr<Object>> m_Objects;
-    std::vector<std::shared_ptr<ObjectController>> m_controllers;
-
-    Shader m_backgroundShader;
-
 public:
     Scene();
-    Scene(const std::string &name);
+    explicit Scene(const QString &name);
     ~Scene();
 
-    void setSceneName(const std::string &name) { m_sceneName = name; }
-    std::string getSceneName() const { return m_sceneName; }
+    void setSceneName(const QString &name) { m_sceneName = name; }
+    QString getSceneName() const { return m_sceneName; }
 
+    void initialize(); // 在添加到mainWindow后调用
+    // 绘制整个场景：先绘制每个object
     void draw();
-    void addObject(std::shared_ptr<Object> obj);
 
-    void addController(std::shared_ptr<ObjectController> ctrl);
+    // 添加对象
+    void addObject(const QSharedPointer<Object> &obj);
+
+    // 添加控制器(管理对象的运动/动画等)
+    void addController(const QSharedPointer<ObjectController> &ctrl);
+
+    // 更新对象 (控制器)
     void updateObjects(double dt);
 
-    Camera &getCamera() { return m_camera; };
+    // 获取相机
+    Camera &getCamera() { return m_camera; }
 
-    void drawBackgroundAndGround(const glm::vec4& skyColor, const glm::vec3& groundColor);
+    // 绘制背景与地面
+    // 用QVector3D/QVector4D替代原先的glm::vec3/vec4
+    void drawBackgroundAndGround(const QVector4D &skyColor,
+                                 const QVector3D &groundColor);
+
+    void setShaderManager(ShaderManager *shaderManager);
+
+private:
+    QString m_sceneName;
+    Camera m_camera; ///< 相机对象(已用Qt方式重构)
+    ShaderManager *m_shaderManager;
+
+    QVector<QSharedPointer<Object>> m_Objects;
+    QVector<QSharedPointer<ObjectController>> m_controllers;
+
+    // 绘制背景相关
+    void initializeGroundBuffers(const QVector3D &groundColor);
+    QOpenGLShaderProgram *m_backgroundShader; 
+    QOpenGLVertexArrayObject m_groundVAO;
+    QOpenGLBuffer m_groundVBO;
+    QOpenGLBuffer m_groundCBO;
 };

@@ -1,152 +1,169 @@
-#include <memory>
-#include <string>
-#include <vector>
+#include "Scene.h"
+#include <QDebug>
+#include <QMatrix4x4>
+#include <QOpenGLExtraFunctions> // 如果需要glPolygonMode或更高级别API
+// #include <QOpenGLBuffer>, <QOpenGLVertexArrayObject> 若你想使用Qt封装buffer
 
-#include <Camera.h>
-#include <Object.h>
-#include <Scene.h>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <iostream>
 
 Scene::Scene()
-    : m_sceneName("Default Scene Name")
+    : m_sceneName("Default Scene Name"), m_shaderManager(nullptr), m_backgroundShader(nullptr)
 {
-    m_backgroundShader.loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
 }
 
-Scene::Scene(const std::string &name)
+Scene::Scene(const QString &name)
     : m_sceneName(name)
-{}
+{
+}
 
-Scene::~Scene() {}
+Scene::~Scene()
+{
+}
+
+void Scene::initialize()
+{
+    initializeOpenGLFunctions();
+
+    m_backgroundShader = m_shaderManager->getShader("basic");
+
+    for (auto &obj : m_Objects)
+    {
+        obj->initialize();
+    }
+
+    std::cout << "Scene initialized" << std::endl;
+}
 
 void Scene::draw()
 {
-    for (auto &obj : m_Objects) {
+    // 绘制所有对象
+    for (auto &obj : m_Objects)
+    {
         auto shader = obj->getShader();
-        shader->use();
-        auto view = m_camera.getViewMatrix();
-        auto projection = m_camera.getProjectionMatrix();
+        if (!shader)
+        {
+            qWarning() << "[Scene::draw] Object has no shader attached!";
+            continue;
+        }
+        shader->bind();
 
-        shader->setUniform("uView", view);
-        shader->setUniform("uProjection", projection);
+        QMatrix4x4 view = m_camera.getViewMatrix();
+        QMatrix4x4 projection = m_camera.getProjectionMatrix();
+
+        shader->setUniformValue("uView", view);
+        shader->setUniformValue("uProjection", projection);
 
         obj->draw();
     }
 }
 
-void Scene::addObject(std::shared_ptr<Object> obj)
+void Scene::addObject(const QSharedPointer<Object> &obj)
 {
     m_Objects.push_back(obj);
 }
 
-void Scene::addController(std::shared_ptr<ObjectController> ctrl)
+void Scene::addController(const QSharedPointer<ObjectController> &ctrl)
 {
     m_controllers.push_back(ctrl);
 }
 
 void Scene::updateObjects(double dt)
 {
-    for (auto &ctrl : m_controllers) {
+    for (auto &ctrl : m_controllers)
+    {
         ctrl->update(dt);
     }
 }
 
-void Scene::drawBackgroundAndGround(const glm::vec4 &skyColor, const glm::vec3 &groundColor)
+void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &groundColor)
 {
-    m_backgroundShader.use();
-    m_backgroundShader.setUniform("drawmode", 1);
+    // 1) 使用 m_backgroundShader
+    m_backgroundShader->bind();
 
-    // 绘制纯色背景作为天空
-    glClearColor(skyColor.r, skyColor.g, skyColor.b, skyColor.a);
+    // 2) 设置清屏色并清屏
+    glClearColor(skyColor.x(), skyColor.y(), skyColor.z(), skyColor.w());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // 定义地面模型矩阵
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(50.0f, 1.0f, 50.0f));
-    m_backgroundShader.setUniform("uModel", model);
+    // 3) 计算 model/view/projection 矩阵
+    QMatrix4x4 model;
+    model.translate(0.0f, -2.0f, 0.0f);
+    model.scale(50.0f, 1.0f, 50.0f);
 
-    auto view = m_camera.getViewMatrix();
-    auto projection = m_camera.getProjectionMatrix();
+    QMatrix4x4 view = m_camera.getViewMatrix();
+    QMatrix4x4 projection = m_camera.getProjectionMatrix();
 
-    m_backgroundShader.setUniform("uView", view);
-    m_backgroundShader.setUniform("uProjection", projection);
+    m_backgroundShader->setUniformValue("uModel", model);
+    m_backgroundShader->setUniformValue("uView", view);
+    m_backgroundShader->setUniformValue("uProjection", projection);
+    m_backgroundShader->setUniformValue("drawmode", 1);
 
-    // 定义地面顶点数据
-    float groundVertices[] = {
-        -1.0f,
-        0.0f,
-        -1.0f, // 左下角
-        1.0f,
-        0.0f,
-        -1.0f, // 右下角
-        1.0f,
-        0.0f,
-        1.0f, // 右上角
+    // 4) 初始化顶点和颜色缓冲（仅初始化一次，避免重复创建）
+    if (!m_groundVAO.isCreated())
+    {
+        initializeGroundBuffers(groundColor);
+    }
 
-        -1.0f,
-        0.0f,
-        -1.0f, // 左下角
-        1.0f,
-        0.0f,
-        1.0f, // 右上角
-        -1.0f,
-        0.0f,
-        1.0f // 左上角
-    };
-
-    // 定义地面颜色
-    float groundColors[] = {groundColor.r,
-                            groundColor.g,
-                            groundColor.b,
-                            groundColor.r,
-                            groundColor.g,
-                            groundColor.b,
-                            groundColor.r,
-                            groundColor.g,
-                            groundColor.b,
-
-                            groundColor.r,
-                            groundColor.g,
-                            groundColor.b,
-                            groundColor.r,
-                            groundColor.g,
-                            groundColor.b,
-                            groundColor.r,
-                            groundColor.g,
-                            groundColor.b};
-
-    GLuint VAO, VBO, CBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &CBO);
-
-    // 设置 VAO
-    glBindVertexArray(VAO);
-
-    // 顶点缓冲
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
-    glEnableVertexAttribArray(0);
-
-    // 颜色缓冲
-    glBindBuffer(GL_ARRAY_BUFFER, CBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(groundColors), groundColors, GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *) 0);
-    glEnableVertexAttribArray(1);
-
-    // 绘制地面
+    // 5) 绑定 VAO 并绘制
+    m_groundVAO.bind();
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+    m_groundVAO.release();
 
-    // 清理
-    glBindVertexArray(0);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &CBO);
-    glDeleteVertexArrays(1, &VAO);
+    m_backgroundShader->release();
+}
+
+void Scene::setShaderManager(ShaderManager *shaderManager)
+{
+    m_shaderManager = shaderManager;
+}
+
+void Scene::initializeGroundBuffers(const QVector3D &groundColor)
+{
+    // Ground vertices
+    float groundVertices[] = {
+        -1.0f, 0.0f, -1.0f,
+        1.0f, 0.0f, -1.0f,
+        1.0f, 0.0f, 1.0f,
+
+        -1.0f, 0.0f, -1.0f,
+        1.0f, 0.0f, 1.0f,
+        -1.0f, 0.0f, 1.0f};
+
+    // Ground colors
+    float r = groundColor.x();
+    float g = groundColor.y();
+    float b = groundColor.z();
+    float groundColors[] = {
+        r, g, b,
+        r, g, b,
+        r, g, b,
+
+        r, g, b,
+        r, g, b,
+        r, g, b};
+
+    // 创建 VAO
+    m_groundVAO.create();
+    m_groundVAO.bind();
+
+    // 创建 VBO（顶点缓冲）
+    m_groundVBO.create();
+    m_groundVBO.bind();
+    m_groundVBO.allocate(groundVertices, sizeof(groundVertices));
+
+    m_backgroundShader->enableAttributeArray(0); // 位置属性：location = 0
+    m_backgroundShader->setAttributeBuffer(0, GL_FLOAT, 0, 3);
+
+    m_groundVBO.release();
+
+    // 创建 CBO（颜色缓冲）
+    m_groundCBO.create();
+    m_groundCBO.bind();
+    m_groundCBO.allocate(groundColors, sizeof(groundColors));
+
+    m_backgroundShader->enableAttributeArray(1); // 颜色属性：location = 1
+    m_backgroundShader->setAttributeBuffer(1, GL_FLOAT, 0, 3);
+
+    m_groundCBO.release();
+    m_groundVAO.release();
 }

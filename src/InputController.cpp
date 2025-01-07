@@ -1,84 +1,60 @@
-#include <GLFW/glfw3.h>
-#include <InputController.h>
-#include <stdexcept>
-#include <unordered_map>
+#include "InputController.h"
+#include <QDebug>
+#include <QtMath> // if needed
 
-// 常量定义
-constexpr float DEFAULT_MOVE_SPEED = 1.5f;   // 默认移动速度
-constexpr float DEFAULT_ROTATE_SPEED = 0.1f; // 默认旋转灵敏度
-constexpr float DEFAULT_ZOOM_SPEED = 1.2f;   // 默认滚轮缩放速度
-constexpr bool DEFAULT_INVERT_Y = false;     // 默认不反转鼠标 Y 轴
 
-InputController::InputController()
-    : m_camera(nullptr)
-    , // 绑定要控制的相机
-    m_moveSpeed(DEFAULT_MOVE_SPEED)
-    , // 默认移动速度
-    m_rotateSpeed(DEFAULT_ROTATE_SPEED)
-    , // 默认鼠标旋转灵敏度
-    m_zoomSpeed(DEFAULT_ZOOM_SPEED)
-    , // 默认滚轮缩放速度
-    m_invertY(DEFAULT_INVERT_Y)
-    , // 默认不反转鼠标 Y 轴
-    m_firstMouse(true)
-    , // 初始鼠标状态
-    m_lastX(0.0)
-    , // 鼠标上一次 X 坐标
-    m_lastY(0.0)
-    , // 鼠标上一次 Y 坐标
-    m_leftButtonPressed(false)
-    ,                           // 默认左键未按下
-    m_rightButtonPressed(false) // 默认右键未按下
+// 默认常量
+static const float DEFAULT_MOVE_SPEED = 1.5f;
+static const float DEFAULT_ROTATE_SPEED = 0.1f;
+static const float DEFAULT_ZOOM_SPEED = 1.2f;
+static const bool DEFAULT_INVERT_Y = false;
+
+InputController::InputController(QObject *parent)
+    : QObject(parent), m_camera(nullptr), m_moveSpeed(DEFAULT_MOVE_SPEED), m_rotateSpeed(DEFAULT_ROTATE_SPEED), m_zoomSpeed(DEFAULT_ZOOM_SPEED), m_invertY(DEFAULT_INVERT_Y), m_firstMouse(true), m_lastPos(0.0, 0.0), m_leftButtonPressed(false), m_rightButtonPressed(false)
 {
-    // 初始化按键状态
-    m_keyPressed.clear();
 }
 
-InputController::InputController(Camera *camera)
-    : m_camera(camera)
-    , // 绑定要控制的相机
-    m_moveSpeed(DEFAULT_MOVE_SPEED)
-    , // 默认移动速度
-    m_rotateSpeed(DEFAULT_ROTATE_SPEED)
-    , // 默认鼠标旋转灵敏度
-    m_zoomSpeed(DEFAULT_ZOOM_SPEED)
-    , // 默认滚轮缩放速度
-    m_invertY(DEFAULT_INVERT_Y)
-    , // 默认不反转鼠标 Y 轴
-    m_firstMouse(true)
-    , // 初始鼠标状态
-    m_lastX(0.0)
-    , // 鼠标上一次 X 坐标
-    m_lastY(0.0)
-    , // 鼠标上一次 Y 坐标
-    m_leftButtonPressed(false)
-    ,                           // 默认左键未按下
-    m_rightButtonPressed(false) // 默认右键未按下
+InputController::InputController(Camera *camera, QObject *parent)
+    : QObject(parent), m_camera(camera), m_moveSpeed(DEFAULT_MOVE_SPEED), m_rotateSpeed(DEFAULT_ROTATE_SPEED), m_zoomSpeed(DEFAULT_ZOOM_SPEED), m_invertY(DEFAULT_INVERT_Y), m_firstMouse(true), m_lastPos(0.0, 0.0), m_leftButtonPressed(false), m_rightButtonPressed(false)
 {
-    // 初始化按键状态
-    m_keyPressed.clear();
+}
+
+void InputController::setCamera(Camera *camera)
+{
+    if (!camera)
+    {
+        qWarning() << "[InputController] camera pointer is null!";
+        return;
+    }
+    m_camera = camera;
 }
 
 void InputController::setMoveSpeed(float speed)
 {
-    if (speed <= 0.0f) {
-        throw std::invalid_argument("Move speed must be positive.");
+    if (speed <= 0.0f)
+    {
+        qWarning() << "[InputController] Move speed must be > 0.";
+        return;
     }
     m_moveSpeed = speed;
 }
 
 void InputController::setRotateSpeed(float speed)
 {
-    if (speed <= 0.0f) {
-        throw std::invalid_argument("Rotate speed must be positive.");
+    if (speed <= 0.0f)
+    {
+        qWarning() << "[InputController] Rotate speed must be > 0.";
+        return;
     }
     m_rotateSpeed = speed;
 }
 
 void InputController::setZoomSpeed(float speed)
 {
-    if (speed <= 0.0f) {
-        throw std::invalid_argument("Zoom speed must be positive.");
+    if (speed <= 0.0f)
+    {
+        qWarning() << "[InputController] Zoom speed must be > 0.";
+        return;
     }
     m_zoomSpeed = speed;
 }
@@ -88,119 +64,10 @@ void InputController::setInvertY(bool invertY)
     m_invertY = invertY;
 }
 
-void InputController::setCamera(Camera *camera)
-{
-    if (!camera) {
-        throw std::invalid_argument("Camera pointer must not be null.");
-    }
-    m_camera = camera;
-}
-
-void InputController::onKey(int key, int action, int mods)
-{
-    if (action == GLFW_PRESS) {
-        pressKey(key);
-    } else if (action == GLFW_RELEASE) {
-        releaseKey(key);
-    }
-}
-
-void InputController::pressKey(int key)
-{
-    m_keyPressed[key] = true;
-}
-
-void InputController::releaseKey(int key)
-{
-    m_keyPressed[key] = false;
-}
-
-void InputController::onMouseButton(int button, int action, int mods)
-{
-    if (button == GLFW_MOUSE_BUTTON_LEFT) {
-        m_leftButtonPressed = (action == GLFW_PRESS);
-    } else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-        m_rightButtonPressed = (action == GLFW_PRESS);
-    }
-}
-
-void InputController::onMouseMove(double xpos, double ypos)
-{
-    if (!m_leftButtonPressed) {
-        m_firstMouse = true;
-        return; // 仅在左键按下时处理鼠标移动
-    }
-    if (m_firstMouse) {
-        m_lastX = xpos;
-        m_lastY = ypos;
-        m_firstMouse = false;
-    }
-
-    double xoffset = xpos - m_lastX;
-    double yoffset = ypos - m_lastY;
-    m_lastX = xpos;
-    m_lastY = ypos;
-
-    if (m_invertY) {
-        yoffset = -yoffset;
-    }
-
-    if (m_camera) {
-        m_camera->rotate(static_cast<float>(-yoffset * m_rotateSpeed),
-                         static_cast<float>(-xoffset * m_rotateSpeed),
-                         0.0f);
-    }
-}
-
-void InputController::onScroll(double xoffset, double yoffset)
-{
-    if (m_camera) {
-        m_camera->zoom(static_cast<float>(-yoffset * m_zoomSpeed));
-    }
-}
-
 void InputController::update(float deltaTime)
 {
+    // 每帧(或每个周期)更新时，处理按键移动
     handleKeyboardMovement(deltaTime);
-}
-
-void InputController::handleKeyboardMovement(float deltaTime)
-{
-    if (!m_camera)
-        return;
-
-    glm::vec3 movement(0.0f);
-
-    // 前后移动
-    if (m_keyPressed[GLFW_KEY_W]) {
-        movement.z += m_moveSpeed * deltaTime;
-    }
-    if (m_keyPressed[GLFW_KEY_S]) {
-        movement.z -= m_moveSpeed * deltaTime;
-    }
-
-    // 左右移动
-    if (m_keyPressed[GLFW_KEY_A]) {
-        movement.x -= m_moveSpeed * deltaTime;
-    }
-    if (m_keyPressed[GLFW_KEY_D]) {
-        movement.x += m_moveSpeed * deltaTime;
-    }
-
-    // 上下移动
-    if (m_keyPressed[GLFW_KEY_Q]) {
-        movement.y += m_moveSpeed * deltaTime;
-    }
-    if (m_keyPressed[GLFW_KEY_E]) {
-        movement.y -= m_moveSpeed * deltaTime;
-    }
-
-    // 应用到相机
-    if (glm::length(movement) > 0.0f) {
-        m_camera->moveForward(movement.z);
-        m_camera->moveRight(movement.x);
-        m_camera->moveUp(movement.y);
-    }
 }
 
 void InputController::reset()
@@ -209,6 +76,143 @@ void InputController::reset()
     m_firstMouse = true;
     m_leftButtonPressed = false;
     m_rightButtonPressed = false;
-    m_lastX = 0.0;
-    m_lastY = 0.0;
+    m_lastPos = QPointF(0.0, 0.0);
+}
+
+// ----------- Qt 事件处理对接 -----------
+
+void InputController::handleKeyPress(Qt::Key key)
+{
+    m_keyPressed[key] = true;
+}
+void InputController::handleKeyRelease(Qt::Key key)
+{
+    m_keyPressed[key] = false;
+}
+
+void InputController::handleMousePress(Qt::MouseButton button, const QPointF &pos)
+{
+    if (button == Qt::LeftButton)
+    {
+        m_leftButtonPressed = true;
+    }
+    else if (button == Qt::RightButton)
+    {
+        m_rightButtonPressed = true;
+    }
+    // 记录当前位置
+    m_lastPos = pos;
+    m_firstMouse = true;
+}
+
+void InputController::handleMouseRelease(Qt::MouseButton button, const QPointF &pos)
+{
+    if (button == Qt::LeftButton)
+    {
+        m_leftButtonPressed = false;
+    }
+    else if (button == Qt::RightButton)
+    {
+        m_rightButtonPressed = false;
+    }
+}
+
+void InputController::handleMouseMove(const QPointF &pos)
+{
+    // 只有在左键按住时才旋转相机 (依据你原逻辑)
+    if (!m_leftButtonPressed || !m_camera)
+    {
+        m_firstMouse = true;
+        return;
+    }
+
+    if (m_firstMouse)
+    {
+        // 第一次捕获鼠标或刚按下左键，重置LastPos
+        m_lastPos = pos;
+        m_firstMouse = false;
+        return;
+    }
+
+    float xoffset = float(pos.x() - m_lastPos.x());
+    float yoffset = float(pos.y() - m_lastPos.y());
+
+    m_lastPos = pos;
+
+    if (m_invertY)
+    {
+        yoffset = -yoffset;
+    }
+    // 旋转
+    // 你原先: camera->rotate( deltaPitch, deltaYaw, 0)
+    //   deltaPitch = -yoffset * m_rotateSpeed
+    //   deltaYaw   = -xoffset * m_rotateSpeed
+    if (m_camera)
+    {
+        m_camera->rotate(-yoffset * m_rotateSpeed,
+                         -xoffset * m_rotateSpeed,
+                         0.0f);
+    }
+}
+
+void InputController::handleWheel(float delta)
+{
+    // Qt: delta>0 表示向上滚
+    // 你原先： camera->zoom( -yoffset * m_zoomSpeed )
+    // 这里 delta = yoffset
+    if (m_camera)
+    {
+        m_camera->zoom(-delta * m_zoomSpeed);
+    }
+}
+
+// ----------- 私有函数: 按键移动相机 -----------
+void InputController::handleKeyboardMovement(float deltaTime)
+{
+    if (!m_camera)
+        return;
+
+    // 构建一个 (x,y,z) 记录WSADQE的位移分量
+    // 这里改用QVector3D
+    QVector3D movement(0.0f, 0.0f, 0.0f);
+
+    // W S => 前后
+    if (m_keyPressed.value(Qt::Key_W, false))
+    {
+        movement.setZ(movement.z() + m_moveSpeed * deltaTime);
+    }
+    if (m_keyPressed.value(Qt::Key_S, false))
+    {
+        movement.setZ(movement.z() - m_moveSpeed * deltaTime);
+    }
+
+    // A D => 左右
+    if (m_keyPressed.value(Qt::Key_A, false))
+    {
+        movement.setX(movement.x() - m_moveSpeed * deltaTime);
+    }
+    if (m_keyPressed.value(Qt::Key_D, false))
+    {
+        movement.setX(movement.x() + m_moveSpeed * deltaTime);
+    }
+
+    // Q E => 上下
+    if (m_keyPressed.value(Qt::Key_Q, false))
+    {
+        movement.setY(movement.y() + m_moveSpeed * deltaTime);
+    }
+    if (m_keyPressed.value(Qt::Key_E, false))
+    {
+        movement.setY(movement.y() - m_moveSpeed * deltaTime);
+    }
+
+    // 若 movement 非零，则移动相机
+    if (!movement.isNull())
+    {
+        // 你在Camera中定义了moveForward/Right/Up
+        //  z分量 => forward, x分量 => right, y分量 => up
+        m_camera->moveForward(movement.z());
+        m_camera->moveRight(movement.x());
+        m_camera->moveUp(movement.y());
+    }
 }

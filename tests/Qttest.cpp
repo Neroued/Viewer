@@ -1,10 +1,13 @@
-#include <Application.h>
+#include <QApplication>
+#include "MainWindow.h"
 #include <Object.h>
 #include <Shader.h>
+#include <Scene.h>
 #include <iostream>
 #include <NavierStokesSolver.h>
-#include <memory>
+#include <QSharedPointer>
 #include <ObjectController.h>
+#include <OpenGLWidget.h>
 
 #include <thread>
 #include <mutex>
@@ -36,7 +39,7 @@ class NSController : public ObjectController
 {
 public:
     NavierStokesSolver m_solver;
-    std::shared_ptr<Object> m_obj;
+    QSharedPointer<Object> m_obj;
     bool updated;
     double nu;
 
@@ -49,7 +52,7 @@ public:
     std::vector<float> colorBufferFront; // 前缓冲区，用于渲染
     std::vector<float> colorBufferBack;  // 后缓冲区，用于计算
 
-    NSController(int subdiv, MeshType type, std::shared_ptr<Object> obj)
+    NSController(int subdiv, MeshType type, QSharedPointer<Object> obj)
         : m_solver(subdiv, type), m_obj(obj), updated(true), nu(std::pow(10, -2.0f)), running(true)
     {
 
@@ -61,7 +64,7 @@ public:
         m_obj->setObjectType(ObjectType::SEMI_STATIC);
         colorBufferFront = generateColors(m_solver.Omega);
         colorBufferBack = colorBufferFront; // 初始化后缓冲区
-        m_obj->colorBuffer = colorBufferFront;
+        m_obj->setColorBuffer(colorBufferFront);
         m_obj->loadFromMesh(m_solver.mesh);
         m_obj->setDrawMode(DrawMode::FILL);
 
@@ -83,7 +86,7 @@ public:
     {
         // 渲染线程中调用：将前缓冲区的数据加载到渲染对象
         std::unique_lock<std::mutex> lock(dataMutex);
-        m_obj->colorBuffer = colorBufferFront;
+        m_obj->setColorBuffer(colorBufferFront);
     }
 
 private:
@@ -157,34 +160,46 @@ private:
     }
 };
 
-int main()
+int main(int argc, char *argv[])
 {
-    Application app;
+    QApplication app(argc, argv);
+
+    QSurfaceFormat format;
+    format.setVersion(4, 6);                        // 指定 OpenGL 版本，例如 3.3
+    format.setProfile(QSurfaceFormat::CoreProfile); // 使用核心配置（或 setProfile(QSurfaceFormat::CompatibilityProfile)）
+    format.setDepthBufferSize(24);                  // 设置深度缓冲大小
+    QSurfaceFormat::setDefaultFormat(format);       // 应用为默认格式
+
+    MainWindow mainWindow;
+    mainWindow.resize(800, 600); // 设置窗口大小
+    mainWindow.show();           // 显示窗口
+    std::cout << "mainWindow initialized" << std::endl;
+
+    auto gl = mainWindow.getOpenGLWidget();
 
     auto scene = std::make_shared<Scene>();
+    scene->setShaderManager(gl->m_shaderManager);
 
     Mesh mesh(10, SPHERE);
 
-    auto shader = std::make_shared<Shader>();
-    shader->loadFromFile("shaders/vertex_shader.glsl", "shaders/fragment_shader.glsl");
-    shader->use();
-
     // 创建两个网格对象
-    auto obj = std::make_shared<Object>();
+    auto obj = QSharedPointer<Object>::create();
     obj->setObjectType(ObjectType::STATIC);
     obj->loadFromMesh(mesh);
     obj->setDrawMode(DrawMode::WIREFRAME);
-    obj->attachShader(shader);
+    obj->setShaderManager(gl->m_shaderManager);
+    obj->setShader("basic");
     auto model = obj->getModelMatrix();
 
     Mesh mesh2(10, CUBE);
-    auto obj2 = std::make_shared<Object>();
+    auto obj2 = QSharedPointer<Object>::create();
     obj2->setObjectType(ObjectType::STATIC);
     obj2->loadFromMesh(mesh2);
     obj2->setDrawMode(DrawMode::WIREFRAME);
     // obj2->setScale(glm::vec3(2.0f, 1.0f, 0.5f));
-    obj2->setPosition(glm::vec3(2.0f, 0.0f, 2.0f));
-    obj2->attachShader(shader);
+    obj2->setPosition(QVector3D(2.0f, 0.0f, 2.0f));
+    obj2->setShaderManager(gl->m_shaderManager);
+    obj2->setShader("basic");
 
     scene->addObject(obj);
     scene->addObject(obj2);
@@ -193,20 +208,22 @@ int main()
     int n = 100;
     for (int i = 0; i < n; ++i)
     {
-        auto obj = std::make_shared<Object>();
+        auto obj = QSharedPointer<Object>::create();
         obj->setObjectType(ObjectType::STATIC);
         obj->loadFromMesh(mesh);
         obj->setDrawMode(DrawMode::WIREFRAME);
-        obj->attachShader(shader);
-        obj->setPosition(glm::vec3(2.0f, (float)(i), 2.0f));
+        obj->setShaderManager(gl->m_shaderManager);
+        obj->setShader("basic");
+        obj->setPosition(QVector3D(2.0f, (float)(i), 2.0f));
         scene->addObject(obj);
     }
 
     // 创建NS对象
-    auto obj3 = std::make_shared<Object>();
-    std::shared_ptr<ObjectController> nsController = std::make_shared<NSController>(100, SPHERE, obj3);
-    obj3->setPosition(glm::vec3(-2.0f, 0.0f, 2.0f));
-    obj3->attachShader(shader);
+    auto obj3 = QSharedPointer<Object>::create();
+    obj3->setPosition(QVector3D(-2.0f, 0.0f, 2.0f));
+    obj3->setShaderManager(gl->m_shaderManager);
+    obj3->setShader("basic");
+    QSharedPointer<NSController> nsController = QSharedPointer<NSController>::create(50, SPHERE, obj3);
     scene->addObject(obj3);
     scene->addController(nsController);
 
@@ -217,8 +234,8 @@ int main()
     // scene->addObject(obj4);
     // scene->addController(nsController2);
 
-    app.addScene(scene);
-    app.run();
+    gl->addScene(scene);
+    gl->initializeScenes();
 
-    return 0;
+    return app.exec(); // 启动应用程序事件循环
 }

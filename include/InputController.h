@@ -1,52 +1,78 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
-/* 统一管理响应用户输入的控制器
- * 目前将用户的输入转换为相机视角的变化
+#include <QObject>
+#include <QMap>
+#include <QPointF>
+#include <QVector3D>
+#include "Camera.h"
+
+/**
+ * @brief 在Qt环境下的输入控制器，用于响应键鼠事件并移动/旋转Camera
+ * 
+ *  - 不再依赖 GLFW_KEY_*、GLFW_PRESS/RELEASE、GLFW_MOUSE_BUTTON_LEFT/RIGHT 等。
+ *  - 改用 Qt::Key, Qt::MouseButton, QEvent::Type 等。
+ *  - 移除了 glm::vec3，改用 QVector3D 。
  */
-
-#include <Camera.h>
-#include <unordered_map>
-
-class InputController
+class InputController : public QObject
 {
+    Q_OBJECT
 public:
-    InputController();
-    InputController(Camera *camera);
-    ~InputController() = default;
+    explicit InputController(QObject* parent = nullptr);
+    explicit InputController(Camera* camera, QObject* parent = nullptr);
 
-    void setCamera(Camera *camera);
+    // 设置相机
+    void setCamera(Camera* camera);
+
+    // 速度/灵敏度/InvertY
     void setMoveSpeed(float speed);
     void setRotateSpeed(float speed);
     void setZoomSpeed(float speed);
     void setInvertY(bool invertY);
 
-    void onKey(int key, int action, int mods);
-    void onMouseButton(int button, int action, int mods);
-    void onMouseMove(double xpos, double ypos);
-    void onScroll(double xoffset, double yoffset);
+    // 更新逻辑（每帧/定时器回调时调用）
     void update(float deltaTime);
+
+    // 重置输入状态
     void reset();
 
+    // 如果你希望直接响应Qt事件：
+    //   - keyPressEvent, keyReleaseEvent, mousePressEvent, mouseReleaseEvent,
+    //     mouseMoveEvent, wheelEvent
+    // 可以在一个QWidget或QOpenGLWidget里调用这些public函数。
+    // 或者继承InputController并重写.
+
+    // 对应原先的 onKey, onMouseButton, onMouseMove, onScroll
+    // 这里可写更贴近 Qt 的参数
+    void handleKeyPress(Qt::Key key);
+    void handleKeyRelease(Qt::Key key);
+
+    void handleMousePress(Qt::MouseButton button, const QPointF &pos);
+    void handleMouseRelease(Qt::MouseButton button, const QPointF &pos);
+    void handleMouseMove(const QPointF &pos);
+    void handleWheel(float delta); // delta >0 往上滚, <0 往下滚
+
 private:
-    Camera *m_camera;
+    // 相机指针
+    Camera* m_camera;
 
-    float m_moveSpeed;   // 移动速度
-    float m_rotateSpeed; // 旋转灵敏度
-    float m_zoomSpeed;   // 缩放灵敏度
+    // 移动/旋转/缩放 速度
+    float m_moveSpeed;
+    float m_rotateSpeed;
+    float m_zoomSpeed;
 
-    bool m_invertY; // 反转Y轴
+    // 是否反转 Y 轴
+    bool m_invertY;
 
-    bool m_firstMouse; // 是否为第一次点击，避免突变
-    double m_lastX;
-    double m_lastY;
+    // 记录按键是否被按下
+    QMap<Qt::Key, bool> m_keyPressed;
 
+    // 鼠标状态
+    bool m_firstMouse;
+    QPointF m_lastPos;  
     bool m_leftButtonPressed;
     bool m_rightButtonPressed;
 
-    std::unordered_map<int, bool> m_keyPressed; // 存储键盘按键状态
-
+private:
+    // 处理按键对应的相机移动
     void handleKeyboardMovement(float deltaTime);
-    void pressKey(int key);
-    void releaseKey(int key);
 };

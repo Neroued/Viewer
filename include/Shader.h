@@ -1,80 +1,58 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
-/* 一个基本的着色器类，提供加载与设置着色器的方法
- * 将来可以在此基础上设计ShaderManager，统一管理各种着色器
+#include <QOpenGLShaderProgram>
+#include <QString>
+#include <QDebug>
+
+/**
+ * @brief 直接继承 QOpenGLShaderProgram
+ *        提供与原先类似的 API，如 loadFromFile() / use() 等
  */
-
-#include <string>
-#include <glad/glad.h>
-#include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-
-class Shader
+class Shader : public QOpenGLShaderProgram
 {
+    Q_OBJECT
 public:
-    Shader();
-    ~Shader();
-
-    Shader(const Shader &) = delete;
-    Shader &operator=(const Shader &) = delete;
-
-    bool loadFromFile(const std::string &vertexPath, const std::string &fragmentPath);
-    void use() const;
-    GLuint getProgramID() const { return m_programID; }
-
-private:
-    GLuint m_programID;
-
-    bool compileShader(GLuint shaderID, const std::string &shaderSource);
-    bool linkProgram(GLuint vertexShaderID, GLuint fragmentShaderID);
-    bool readShaderFile(const std::string &filePath, std::string &outShaderCode);
-
-public:
-    template <typename T>
-    void setUniform(const std::string &name, const T &value) const
+    explicit Shader(QObject *parent = nullptr)
+        : QOpenGLShaderProgram(parent)
     {
-        GLint location = glGetUniformLocation(m_programID, name.c_str());
-        if (location == -1)
+    }
+
+    ~Shader() override = default;
+
+    /**
+     * @brief 加载并编译顶点、片段着色器，然后 link
+     * @param vertexPath    顶点着色器文件路径
+     * @param fragmentPath  片段着色器文件路径
+     * @return 成功/失败
+     */
+    bool loadFromFile(const QString &vertexPath, const QString &fragmentPath)
+    {
+        // 添加顶点着色器
+        if (!addShaderFromSourceFile(QOpenGLShader::Vertex, vertexPath))
         {
-            std::cerr << "Warning: Uniform '" << name << "' not found!" << std::endl;
-            return;
+            qWarning() << "[MyShader] Vertex shader compile error:" << log();
+            return false;
         }
-        uploadUniform(location, value);
+        // 添加片段着色器
+        if (!addShaderFromSourceFile(QOpenGLShader::Fragment, fragmentPath))
+        {
+            qWarning() << "[MyShader] Fragment shader compile error:" << log();
+            return false;
+        }
+        // 链接
+        if (!link())
+        {
+            qWarning() << "[MyShader] Program link error:" << log();
+            return false;
+        }
+        return true;
     }
 
-    static void uploadUniform(GLint location, bool value)
+    /**
+     * @brief 相当于 glUseProgram
+     */
+    void use()
     {
-        glUniform1i(location, static_cast<int>(value));
-    }
-
-    static void uploadUniform(GLint location, int value)
-    {
-        glUniform1i(location, value);
-    }
-
-    static void uploadUniform(GLint location, float value)
-    {
-        glUniform1f(location, value);
-    }
-
-    static void uploadUniform(GLint location, const glm::vec2 &value)
-    {
-        glUniform2fv(location, 1, glm::value_ptr(value));
-    }
-
-    static void uploadUniform(GLint location, const glm::vec3 &value)
-    {
-        glUniform3fv(location, 1, glm::value_ptr(value));
-    }
-
-    static void uploadUniform(GLint location, const glm::vec4 &value)
-    {
-        glUniform4fv(location, 1, glm::value_ptr(value));
-    }
-
-    static void uploadUniform(GLint location, const glm::mat4 &value)
-    {
-        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
+        bind();
     }
 };

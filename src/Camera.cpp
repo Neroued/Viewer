@@ -1,152 +1,160 @@
-#include <Camera.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <stdexcept>
+#include "Camera.h"
+#include <QtMath> // for qDegreesToRadians, qBound
+#include <QDebug>
 
 Camera::Camera()
-    : m_position(0.0f, 0.0f, 3.0f)
-    , m_orientation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
-    , m_fov(45.0f)
-    , m_aspect(16.0f / 9.0f)
-    , m_nearPlane(0.1f)
-    , m_farPlane(100.0f)
-    , m_minFov(10.0f)
-    , m_maxFov(90.0f)
-{}
+    : m_position(0.0f, 0.0f, 3.0f), m_orientation(1.0f, 0.0f, 0.0f, 0.0f) // identity quaternion
+      ,
+      m_fov(45.0f), m_aspect(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(100.0f), m_minFov(10.0f), m_maxFov(90.0f)
+{
+}
 
-Camera::Camera(const glm::vec3 &position,
-               const glm::quat &orientation,
-               float fov,
+Camera::Camera(const QVector3D &position,
+               const QQuaternion &orientation,
+               float fovDeg,
                float aspect,
                float nearPlane,
                float farPlane)
-    : m_position(position)
-    , m_orientation(orientation)
-    , m_fov(fov)
-    , m_aspect(aspect)
-    , m_nearPlane(nearPlane)
-    , m_farPlane(farPlane)
-    , m_minFov(1.0f)
-    , m_maxFov(90.0f)
+    : m_position(position), m_orientation(orientation.normalized()), m_fov(fovDeg), m_aspect(aspect), m_nearPlane(nearPlane), m_farPlane(farPlane), m_minFov(1.0f), m_maxFov(90.0f)
 {
-    if (m_nearPlane <= 0.0f || m_farPlane <= m_nearPlane) {
-        throw std::invalid_argument(
-            "Invalid clipping planes: nearPlane must be positive and less than farPlane.");
+    if (nearPlane <= 0.0f || farPlane <= nearPlane)
+    {
+        qWarning() << "[Camera] Invalid clipping planes!";
     }
 }
 
-void Camera::setPosition(const glm::vec3 &pos)
+void Camera::setPosition(const QVector3D &pos)
 {
     m_position = pos;
 }
 
-void Camera::setOrientation(const glm::quat &orientation)
+void Camera::setOrientation(const QQuaternion &orientation)
 {
-    m_orientation = glm::normalize(orientation);
+    m_orientation = orientation.normalized();
 }
 
-void Camera::setOrientation(float pitch, float yaw, float roll)
+void Camera::setOrientation(float pitchDeg, float yawDeg, float rollDeg)
 {
-    m_orientation = eulerToQuat(pitch, yaw, roll);
+    m_orientation = eulerToQuat(pitchDeg, yawDeg, rollDeg);
 }
 
-glm::vec3 Camera::getEulerOrientation() const
+QVector3D Camera::getEulerOrientation() const
 {
     return quatToEuler(m_orientation);
 }
 
-void Camera::setFOV(float fov)
+void Camera::setFOV(float fovDeg)
 {
-    m_fov = glm::clamp(fov, m_minFov, m_maxFov);
+    // 限制在 [m_minFov, m_maxFov] 区间
+    m_fov = qBound(m_minFov, fovDeg, m_maxFov);
 }
 
 void Camera::setAspect(float aspect)
 {
-    if (aspect <= 0.0f) {
-        throw std::invalid_argument("Aspect ratio must be positive.");
+    if (aspect <= 0.0f)
+    {
+        qWarning() << "[Camera::setAspect] Aspect ratio must be > 0.";
+        return;
     }
     m_aspect = aspect;
 }
 
 void Camera::setClippingPlanes(float nearPlane, float farPlane)
 {
-    if (nearPlane <= 0.0f || farPlane <= nearPlane) {
-        throw std::invalid_argument(
-            "Invalid clipping planes: nearPlane must be positive and less than farPlane.");
+    if (nearPlane <= 0.0f || farPlane <= nearPlane)
+    {
+        qWarning() << "[Camera::setClippingPlanes] Invalid near/far plane!";
+        return;
     }
     m_nearPlane = nearPlane;
     m_farPlane = farPlane;
 }
 
-glm::mat4 Camera::getViewMatrix() const
+QMatrix4x4 Camera::getViewMatrix() const
 {
-    glm::mat4 rotationMatrix = glm::toMat4(glm::conjugate(m_orientation));
-    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), -m_position);
-    return rotationMatrix * translationMatrix;
+    QVector3D forward = m_orientation.rotatedVector(QVector3D(0.0f, 0.0f, -1.0f)); // 相机的前方向
+    QVector3D up = m_orientation.rotatedVector(QVector3D(0.0f, 1.0f, 0.0f));       // 相机的上方向
+    QVector3D center = m_position + forward;                                       // 观察点 = 相机位置 + 前方向
+
+    QMatrix4x4 view;
+    view.lookAt(m_position, center, up);
+
+    return view;
 }
 
-glm::mat4 Camera::getProjectionMatrix() const
+QMatrix4x4 Camera::getProjectionMatrix() const
 {
-    return glm::perspective(glm::radians(m_fov), m_aspect, m_nearPlane, m_farPlane);
+    // QMatrix4x4::perspective(fovVertical, aspect, nearPlane, farPlane)
+    // fovVertical 是角度
+    QMatrix4x4 proj;
+    proj.perspective(m_fov, m_aspect, m_nearPlane, m_farPlane);
+    return proj;
 }
 
 void Camera::moveForward(float distance)
 {
-    glm::vec3 forward = glm::rotate(m_orientation, glm::vec3(0.0f, 0.0f, -1.0f));
+    // 根据当前视角的前方向移动 (相机的 -Z 方向)
+    QVector3D forward = m_orientation.rotatedVector(QVector3D(0.0f, 0.0f, -1.0f));
     m_position += forward * distance;
 }
 
 void Camera::moveRight(float distance)
 {
-    glm::vec3 right = glm::rotate(m_orientation, glm::vec3(1.0f, 0.0f, 0.0f));
+    // 根据当前视角的右方向移动 (相机的 +X 方向)
+    QVector3D right = m_orientation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f));
     m_position += right * distance;
 }
 
 void Camera::moveUp(float distance)
 {
-    glm::vec3 up(0.0f, 1.0f, 0.0f);
+    // 始终沿全局 Y 轴移动 (世界坐标系的 up 方向)
+    QVector3D up(0.0f, 1.0f, 0.0f);
     m_position += up * distance;
 }
 
-void Camera::rotate(const glm::vec3 &axis, float angleDeg)
+void Camera::rotate(const QVector3D &axis, float angleDeg)
 {
-    glm::quat rotation = glm::angleAxis(glm::radians(angleDeg), glm::normalize(axis));
-    m_orientation = glm::normalize(rotation * m_orientation);
+    // 根据任意轴旋转
+    QQuaternion rotation = QQuaternion::fromAxisAndAngle(axis.normalized(), angleDeg);
+    m_orientation = (rotation * m_orientation).normalized();
 }
 
 void Camera::rotate(float deltaPitch, float deltaYaw, float deltaRoll)
-// 第一人称视角相机，俯仰绕自身X轴，其余绕世界轴
 {
-    glm::vec3 cameraRight = glm::rotate(m_orientation, glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::quat pitchQuat = glm::angleAxis(glm::radians(deltaPitch), cameraRight);
-    // glm::quat pitchQuat = glm::angleAxis(glm::radians(deltaPitch), glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::quat yawQuat = glm::angleAxis(glm::radians(deltaYaw), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::quat rollQuat = glm::angleAxis(glm::radians(deltaRoll), glm::vec3(0.0f, 0.0f, 1.0f));
-    m_orientation = glm::normalize(yawQuat * pitchQuat * rollQuat * m_orientation);
+    // 按顺序进行旋转：yaw (世界Y), pitch (相机X), roll (相机Z)
+    QVector3D camRight = m_orientation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f)); // 当前相机的 X 方向
+
+    QQuaternion pitchQ = QQuaternion::fromAxisAndAngle(camRight, deltaPitch);                   // pitch 绕相机 X 轴
+    QQuaternion yawQ = QQuaternion::fromAxisAndAngle(QVector3D(0.0f, 1.0f, 0.0f), deltaYaw);    // yaw 绕世界 Y 轴
+    QQuaternion rollQ = QQuaternion::fromAxisAndAngle(QVector3D(0.0f, 0.0f, -1.0f), deltaRoll); // roll 绕相机 Z 轴
+
+    m_orientation = (yawQ * pitchQ * rollQ * m_orientation).normalized(); // 顺序合并旋转
 }
 
 void Camera::zoom(float offset)
 {
-    m_fov = glm::clamp(m_fov - offset, m_minFov, m_maxFov);
+    // offset>0 => fov 减小 => 视角变窄 => 视野放大
+    setFOV(m_fov - offset);
 }
 
-glm::quat Camera::eulerToQuat(float pitchDeg, float yawDeg, float rollDeg) const
+// -------------------- 辅助：Euler <-> QQuaternion --------------------
+
+QQuaternion Camera::eulerToQuat(float pitchDeg, float yawDeg, float rollDeg) const
 {
-    glm::quat pitchQuat = glm::angleAxis(glm::radians(pitchDeg), glm::vec3(1.0f, 0.0f, 0.0f));
-    glm::quat yawQuat = glm::angleAxis(glm::radians(yawDeg), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::quat rollQuat = glm::angleAxis(glm::radians(rollDeg), glm::vec3(0.0f, 0.0f, 1.0f));
-    return glm::normalize(yawQuat * pitchQuat * rollQuat);
+    // QQuaternion 提供 fromEulerAngles(pitch, yaw, roll) (注意顺序 Y->Z->X)
+    // 若要严格跟 glm 的 (yaw, pitch, roll) 对应，需要仔细确认
+    // 这里先用 Qt 自带 fromEulerAngles, 它按照 (pitch, yaw, roll) 旋转顺序
+    // Qt文档: "Rotation is performed around the X axis, then around the Y axis, and then around the Z axis."
+    QQuaternion q = QQuaternion::fromEulerAngles(pitchDeg, yawDeg, rollDeg);
+    return q.normalized();
 }
 
-glm::vec3 Camera::quatToEuler(const glm::quat &q) const
+QVector3D Camera::quatToEuler(const QQuaternion &quat) const
 {
-    glm::vec3 euler = glm::eulerAngles(q);
-    return glm::degrees(euler);
-}
-
-void Camera::normalizeOrientation()
-{
-    m_orientation = glm::normalize(m_orientation);
+    // QQuaternion::toEulerAngles() 也有类似
+    // 但 Qt 5.15+ 中才有 toEulerAngles()
+    // 在较老版本 Qt 中可能需自己拆解
+    // 这里直接:
+    QVector3D euler = quat.toEulerAngles(); // pitch,yaw,roll in degrees
+    return euler;
 }

@@ -1,5 +1,4 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
 /* Object渲染对象
  * 是渲染架构中最小的组成单元
@@ -8,15 +7,18 @@
  * draw()方法需要在上一级Scene提供的语境中使用，即需要设置好相机相关的数据
  */
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <Shader.h>
+#include <QOpenGLFunctions> // 替换GLAD/GLFW
+#include <QVector3D>        // 替换glm::vec3
+#include <QQuaternion>      // 替换glm::quat
+#include <QMatrix4x4>       // 替换glm::mat4
+#include <QOpenGLBuffer>    // 可以使用QOpenGLBuffer/QOpenGLVertexArrayObject等
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLShaderProgram>
+#include <QString>
 #include <memory>
+#include <vector>
 
+#include <ShaderManager.h>
 #include <Mesh.h>
 
 enum class DrawMode
@@ -33,59 +35,64 @@ enum class ObjectType
     SEMI_STATIC // 半静态对象，顶点位置在创建时上传，颜色数据动态上传
 };
 
-class Object
+class Object : public QOpenGLFunctions
 {
 public:
     Object();
     ~Object();
 
-    GLuint VAO, VBO, EBO, colorVBO;
-    std::vector<float> vertices;       // 每三个元素表示一个点的坐标
-    std::vector<unsigned int> indices; // 每三个元素表示一个三角形的三个顶点
-    std::vector<float> colorBuffer;
+    std::size_t getVerticesSize() const { return m_vertices.size(); }
+    std::size_t getIndicesSize() const { return m_indices.size(); }
 
-    std::size_t getVerticesSize() const { return vertices.size(); }
-    std::size_t getIndicesSize() const { return indices.size(); }
-
-    void setPosition(const glm::vec3 &pos);
-    void setRotation(const glm::quat &rot);
-    void setScale(const glm::vec3 &scl);
-    void updateModelMatrix();
-    glm::mat4 getModelMatrix();
+    // 变换设置
+    void setPosition(const QVector3D &pos);
+    void setRotation(const QQuaternion &rot);
+    void setScale(const QVector3D &scl);
+    QMatrix4x4 getModelMatrix();
 
     void loadFromMesh(const Mesh &mesh);
-    void attachShader(const std::shared_ptr<Shader> &sdr) { shader = sdr; }
-    std::shared_ptr<Shader> getShader() const { return shader; }
+
+    void setShaderManager(ShaderManager *manager) { m_shaderManager = manager; }
+    void setShader(const QString &shaderName);
+    QOpenGLShaderProgram *getShader() const { return m_shader; }
+    void setColorBuffer(const std::vector<float> &colorData);
 
     void setDrawMode(DrawMode mode);
     DrawMode getDrawMode() const;
     void setObjectType(ObjectType type);
     ObjectType getObjectType() const;
 
-    void draw(); // 需要在上一级Scene提供的语境中使用
+    void initialize(); // 在添加到Scene后由该scene调用
+    void draw();       // 需要在上一级Scene提供的语境中使用
 
 private:
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
-    glm::mat4 modelMatrix;
-    bool shouldUpdateModelMatrix;
+    QOpenGLVertexArrayObject m_vao;
+    QOpenGLBuffer m_vertexBuffer;
+    QOpenGLBuffer m_indexBuffer;
+    QOpenGLBuffer m_colorBuffer;
 
-    std::shared_ptr<Shader> shader; // 使用的shader，可与其他对象共享
-    DrawMode drawmode;
-    ObjectType objecttype;
+    std::vector<float> m_vertices;       // 每三个元素表示一个点的坐标
+    std::vector<unsigned int> m_indices; // 每三个元素表示一个三角形的三个顶点
+    std::vector<float> m_colorBufferData;
+
+    QVector3D m_position;
+    QQuaternion m_rotation;
+    QVector3D m_scale;
+    QMatrix4x4 m_modelMatrix;
+    bool m_shouldUpdateModelMatrix;
+
+    ShaderManager *m_shaderManager;
+    QString m_shaderName;
+    QOpenGLShaderProgram *m_shader; // 使用的shader，可与其他对象共享
+    DrawMode m_drawMode;
+    ObjectType m_objectType;
 
 private:
-    void uploadVertex(); // 辅助函数，均需要在绑定VAO之后使用
-    void uploadElement();
-    void uploadColorBuffer();
     void uploadToBuffer();
-
-    void updateVertex();
-    void updateElement();
-    void updateColorBuffer();
-    void updateBuffer(); // 更新Buffer中的数据
+    void updateBuffer();
 
     void drawWireframe();
     void drawFill();
+
+    void updateModelMatrix();
 };

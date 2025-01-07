@@ -1,5 +1,21 @@
 # Viewer
 
+## 使用Qt框架重构
+
+在原有基础上，添加一个MainWindow作为程序的主窗口，管理UI以及OpenGLWidget。
+
+Application层改名为OpenGLWidget，继承自QOpenGLWidget，管理和提供opengl语境，并管理Scene对象。
+
+Scene和Object需要增加initialize()方法，在被添加到OpenGLWidget后再初始化（上传VAO等数据）。
+
+顺序：QApplication -> MainWindow -> 创建Object -> 创建场景 -> 将对象添加到场景中 -> 将场景添加到MainWindow -> 调用Scene的initialize()初始化场景和对象。
+
+
+
+
+
+
+
 ## 架构介绍
 
 总体分为三层，Application - Scene - Object。

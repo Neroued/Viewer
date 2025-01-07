@@ -1,241 +1,308 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <Object.h>
-#include <cstring>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include "Object.h"
+#include <QDebug>
 
-#include <Mesh.h>
+#include "Mesh.h" // 如果需要把 Mesh 解析为顶点索引
 
 Object::Object()
-    : position(0.0f, 0.0f, 0.0f)
-    , rotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f))
-    , scale(1.0f, 1.0f, 1.0f)
-    , shouldUpdateModelMatrix(true)
-    , drawmode(DrawMode::FILL)
-    , objecttype(ObjectType::SEMI_STATIC)
+    : m_position(0.0f, 0.0f, 0.0f)
+    , m_rotation()
+    , m_scale(1.0f, 1.0f, 1.0f)
+    , m_shouldUpdateModelMatrix(true)
+    , m_shaderManager(nullptr)
+    , m_shaderName("basic")
+    , m_shader(nullptr)
+    , m_drawMode(DrawMode::FILL)
+    , m_objectType(ObjectType::SEMI_STATIC)
 {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-    glGenBuffers(1, &colorVBO);
 }
 
-Object::~Object() = default;
+Object::~Object()
+{
+}
+
+void Object::initialize()
+{
+    initializeOpenGLFunctions();
+
+    // Initialize VAO
+    if (!m_vao.create())
+    {
+        qWarning() << "[Object] Failed to create VAO!";
+    }
+
+    // Initialize Buffers
+    m_vertexBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_vertexBuffer.create();
+
+    m_indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+    m_indexBuffer.create();
+
+    m_colorBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_colorBuffer.create();
+
+    uploadToBuffer();
+
+    if (m_shaderManager)
+    {
+        m_shader = m_shaderManager->getShader(m_shaderName);
+    }
+}
+
+// 变换相关
+void Object::setPosition(const QVector3D &pos)
+{
+    m_position = pos;
+    m_shouldUpdateModelMatrix = true;
+}
+void Object::setRotation(const QQuaternion &rot)
+{
+    m_rotation = rot;
+    m_shouldUpdateModelMatrix = true;
+}
+void Object::setScale(const QVector3D &scl)
+{
+    m_scale = scl;
+    m_shouldUpdateModelMatrix = true;
+}
 
 void Object::updateModelMatrix()
 {
-    glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), position);
-    glm::mat4 rotationMatrix = glm::toMat4(rotation);
-    glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
-    modelMatrix = translationMatrix * rotationMatrix * scaleMatrix;
+    m_modelMatrix.setToIdentity();
+    m_modelMatrix.translate(m_position);
+    m_modelMatrix.rotate(m_rotation);
+    m_modelMatrix.scale(m_scale);
+
+    m_shouldUpdateModelMatrix = false;
 }
 
-glm::mat4 Object::getModelMatrix()
+QMatrix4x4 Object::getModelMatrix()
 {
-    if (shouldUpdateModelMatrix) {
+    if (m_shouldUpdateModelMatrix)
+    {
         updateModelMatrix();
-        shouldUpdateModelMatrix = false;
     }
-
-    return modelMatrix;
-}
-
-void Object::setPosition(const glm::vec3 &pos)
-{
-    position = pos;
-    shouldUpdateModelMatrix = true;
-}
-
-void Object::setRotation(const glm::quat &rot)
-{
-    rotation = rot;
-    shouldUpdateModelMatrix = true;
-}
-
-void Object::setScale(const glm::vec3 &scl)
-{
-    scale = scl;
-    shouldUpdateModelMatrix = true;
+    return m_modelMatrix;
 }
 
 void Object::loadFromMesh(const Mesh &mesh)
 {
-    vertices.resize(mesh.vertices.size * 3);
-    indices.resize(mesh.indices.size);
+    m_vertices.resize(mesh.vertices.size * 3);
+    m_indices.resize(mesh.indices.size);
 
     std::size_t k = 0;
-    for (std::size_t i = 0; i < mesh.vertices.size; ++i) {
-        vertices[k++] = (float) mesh.vertices[i].x;
-        vertices[k++] = (float) mesh.vertices[i].y;
-        vertices[k++] = (float) mesh.vertices[i].z;
+    for (std::size_t i = 0; i < mesh.vertices.size; ++i)
+    {
+        m_vertices[k++] = (float)mesh.vertices[i].x;
+        m_vertices[k++] = (float)mesh.vertices[i].y;
+        m_vertices[k++] = (float)mesh.vertices[i].z;
     }
 
-    for (std::size_t i = 0; i < mesh.indices.size; ++i) {
-        indices[i] = mesh.indices[i];
+    for (std::size_t i = 0; i < mesh.indices.size; ++i)
+    {
+        m_indices[i] = mesh.indices[i];
     }
+}
 
-    uploadToBuffer();
+void Object::setShader(const QString &shaderName)
+{   
+    m_shaderName = shaderName;
+    if (m_shaderManager)
+    {
+        m_shader = m_shaderManager->getShader(shaderName);
+    }
 }
 
 void Object::setDrawMode(DrawMode mode)
 {
-    drawmode = mode;
+    m_drawMode = mode;
 }
 
 DrawMode Object::getDrawMode() const
 {
-    return drawmode;
+    return m_drawMode;
 }
 
 void Object::setObjectType(ObjectType type)
 {
-    objecttype = type;
+    m_objectType = type;
 }
 
 ObjectType Object::getObjectType() const
 {
-    return objecttype;
+    return m_objectType;
 }
 
-void Object::uploadVertex()
+void Object::setColorBuffer(const std::vector<float> &colorData)
 {
-    // 上传顶点数据到 VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW
-                                                       : GL_STATIC_DRAW; // 动态或静态
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), usage);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
-    glEnableVertexAttribArray(0); // 位置属性：location = 0
+    m_colorBufferData = colorData;
 }
 
-void Object::uploadElement()
-{
-    // 索引数据绑定 EBO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    GLenum usage = (objecttype == ObjectType::DYNAMIC) ? GL_DYNAMIC_DRAW
-                                                       : GL_STATIC_DRAW; // 动态或静态
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 indices.size() * sizeof(unsigned int),
-                 indices.data(),
-                 usage);
-}
-
-void Object::uploadColorBuffer()
-{
-    // 上传颜色数据到 colorVBO
-    glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-    if (colorBuffer.empty()) {
-        // 如果 colorBuffer 为空，上传一个默认的颜色数据
-        float defaultColor[3] = {0.0f, 0.0f, 0.0f};
-        glBufferData(GL_ARRAY_BUFFER, sizeof(defaultColor), defaultColor, GL_STATIC_DRAW);
-    } else {
-        GLenum usage = (objecttype == ObjectType::DYNAMIC || objecttype == ObjectType::SEMI_STATIC)
-                           ? GL_DYNAMIC_DRAW
-                           : GL_STATIC_DRAW;
-        glBufferData(GL_ARRAY_BUFFER, colorBuffer.size() * sizeof(float), colorBuffer.data(), usage);
-    }
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *) 0);
-    glEnableVertexAttribArray(1); // 颜色属性：location = 1
-}
-
+// ---------------------------------------------------------
+// Buffer upload / update
+// ---------------------------------------------------------
 void Object::uploadToBuffer()
 {
-    glBindVertexArray(VAO);
+    // 绑定VAO
+    m_vao.bind();
 
-    uploadVertex();
-    uploadElement();
-    uploadColorBuffer();
+    // === Vertex Buffer ===
+    m_vertexBuffer.bind();
+    QOpenGLBuffer::UsagePattern usage = QOpenGLBuffer::StaticDraw;
+    if (m_objectType == ObjectType::DYNAMIC)
+    {
+        usage = QOpenGLBuffer::DynamicDraw;
+    }
+    m_vertexBuffer.setUsagePattern(usage);
+    m_vertexBuffer.allocate(m_vertices.data(), int(m_vertices.size() * sizeof(float)));
 
-    glBindVertexArray(0); // 解绑 VAO
-}
+    // 顶点属性 (location=0), 3个float
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
 
-void Object::updateVertex()
-{
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
-}
+    // === Index Buffer ===
+    m_indexBuffer.bind();
+    m_indexBuffer.setUsagePattern(usage);
+    m_indexBuffer.allocate(m_indices.data(), int(m_indices.size() * sizeof(unsigned int)));
+    // Note: QOpenGLBuffer::IndexBuffer is automatically bound to GL_ELEMENT_ARRAY_BUFFER
 
-void Object::updateElement()
-{
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,
-                    0,
-                    indices.size() * sizeof(unsigned int),
-                    indices.data());
-}
+    // === Color Buffer ===
+    m_colorBuffer.bind();
+    QOpenGLBuffer::UsagePattern colorUsage = usage;
+    // SEMI_STATIC 在这里可视具体情况设置
+    if (m_objectType == ObjectType::SEMI_STATIC)
+    {
+        colorUsage = QOpenGLBuffer::DynamicDraw;
+    }
+    m_colorBuffer.setUsagePattern(colorUsage);
+    if (!m_colorBufferData.empty())
+    {
+        m_colorBuffer.allocate(m_colorBufferData.data(),
+                               int(m_colorBufferData.size() * sizeof(float)));
+    }
+    else
+    {
+        // 如果空，则暂时分配一个小空间 or leave it
+        float defaultColor[3] = {0.0f, 0.0f, 0.0f};
+        m_colorBuffer.allocate(defaultColor, int(sizeof(defaultColor)));
+    }
+    // 假定每个顶点3个float表示颜色
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(1);
 
-void Object::updateColorBuffer()
-{
-    glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, colorBuffer.size() * sizeof(float), colorBuffer.data());
+    m_vao.release();
 }
 
 void Object::updateBuffer()
 {
-    switch (objecttype) {
-    case ObjectType::STATIC:
-        break;
+    // 在对应Buffer上使用glBufferSubData之类更新
+    // 在QOpenGLBuffer里对应是 write() 或 allocate() 一部分
+    // 根据 m_objectType 判断更新逻辑
+    m_vao.bind();
 
-    case ObjectType::SEMI_STATIC:
-        updateColorBuffer();
-        break;
-
-    case ObjectType::DYNAMIC:
-        updateVertex();
-        updateElement();
-        updateColorBuffer();
-        break;
-
-    default:
-        break;
+    if (m_objectType == ObjectType::DYNAMIC)
+    {
+        // 顶点 & 索引 & 颜色都更新
+        if (m_vertexBuffer.isCreated())
+        {
+            m_vertexBuffer.bind();
+            m_vertexBuffer.write(0, m_vertices.data(),
+                                 qint64(m_vertices.size() * sizeof(float)));
+        }
+        if (m_indexBuffer.isCreated())
+        {
+            m_indexBuffer.bind();
+            m_indexBuffer.write(0, m_indices.data(),
+                                qint64(m_indices.size() * sizeof(unsigned int)));
+        }
+        if (m_colorBuffer.isCreated() && !m_colorBufferData.empty())
+        {
+            m_colorBuffer.bind();
+            m_colorBuffer.write(0, m_colorBufferData.data(),
+                                qint64(m_colorBufferData.size() * sizeof(float)));
+        }
     }
+    else if (m_objectType == ObjectType::SEMI_STATIC)
+    {
+        // 仅更新 color
+        if (m_colorBuffer.isCreated() && !m_colorBufferData.empty())
+        {
+            m_colorBuffer.bind();
+            m_colorBuffer.write(0, m_colorBufferData.data(),
+                                qint64(m_colorBufferData.size() * sizeof(float)));
+        }
+    }
+    // STATIC 不更新
+
+    m_vao.release();
 }
 
-void Object::drawWireframe()
-{
-    shader->setUniform("drawmode", 0);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.0f);
-    glEnable(GL_LINE_SMOOTH);
-    glDrawElements(GL_TRIANGLES, getIndicesSize(), GL_UNSIGNED_INT, 0);
-}
-
-void Object::drawFill()
-{
-    shader->setUniform("drawmode", 1);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDrawElements(GL_TRIANGLES, getIndicesSize(), GL_UNSIGNED_INT, 0);
-}
-
+// ---------------------------------------------------------
+// draw() & internal drawWireframe/drawFill
+// ---------------------------------------------------------
 void Object::draw()
 {
-    glm::mat4 model = getModelMatrix();
-    shader->setUniform("uModel", model);
+    // 如果尚未初始化，则需上传buffer
+    if (!m_vao.isCreated())
+    {
+        // create() done in constructor, but maybe not allocated
+        uploadToBuffer();
+    }
 
-    glBindVertexArray(VAO);
+    // 如果DYNAMIC/SEMI_STATIC，可能需要每帧更新
+    if (m_objectType == ObjectType::DYNAMIC ||
+        m_objectType == ObjectType::SEMI_STATIC)
+    {
+        updateBuffer();
+    }
 
-    updateBuffer();
+    if (!m_shader)
+    {
+        qWarning() << "[Object::draw] No shader attached!";
+        return;
+    }
+    m_shader->bind();
 
-    switch (drawmode) {
+    // 设置模型矩阵给Shader
+    auto model = getModelMatrix();
+    m_shader->setUniformValue("uModel", model);
+
+    // 绑定VAO
+    m_vao.bind();
+
+    // 根据drawMode
+    switch (m_drawMode)
+    {
     case DrawMode::WIREFRAME:
         drawWireframe();
         break;
-
     case DrawMode::FILL:
         drawFill();
         break;
-
     case DrawMode::WIREFRAME_AND_FILL:
         drawWireframe();
         drawFill();
         break;
-
-    default:
-        break;
     }
 
-    glBindVertexArray(0);
+    m_vao.release();
+}
+
+void Object::drawWireframe()
+{
+    // 在Qt中仍可使用 glPolygonMode
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(1.0f);
+    glEnable(GL_LINE_SMOOTH);
+
+    // m_indices.size()是索引数
+    glDrawElements(GL_TRIANGLES, GLsizei(m_indices.size()), GL_UNSIGNED_INT, nullptr);
+
+    // 恢复默认
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+void Object::drawFill()
+{
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDrawElements(GL_TRIANGLES, GLsizei(m_indices.size()), GL_UNSIGNED_INT, nullptr);
 }
