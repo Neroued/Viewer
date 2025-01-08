@@ -9,14 +9,12 @@
 #include <QDebug>
 
 #include <cmath>
-#include <stdexcept>
 
 #include <Camera.h>
 #include <InputController.h>
 #include <Scene.h>
 
 #include <Mesh.h>
-#include <iostream>
 
 OpenGLWidget::OpenGLWidget(QWidget *parent)
     : QOpenGLWidget(parent), m_title("Default Title"), m_width(800), m_height(450), m_currentScene(nullptr), m_shaderManager(nullptr)
@@ -76,8 +74,8 @@ void OpenGLWidget::initializeGL()
     // 在这里加载所需要的所有shader
     m_shaderManager = QSharedPointer<ShaderManager>::create();
 
-    m_shaderManager->loadShader("basic", "shaders/vertex_shader.glsl",
-                                "shaders/fragment_shader.glsl");
+    m_shaderManager->loadShader("basic", ":/vertex_shader.glsl",
+                                ":/fragment_shader.glsl");
 }
 
 void OpenGLWidget::resizeGL(int w, int h)
