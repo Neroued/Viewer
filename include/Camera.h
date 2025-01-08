@@ -45,6 +45,9 @@ public:
     float getNearPlane() const { return m_nearPlane; }
     float getFarPlane() const { return m_farPlane; }
 
+    void setMinBound(const QVector3D &minBound);
+    void setMaxBound(const QVector3D &maxBound);
+
     // ------------------------
     // 矩阵获取
     // ------------------------
@@ -94,10 +97,13 @@ private:
     float m_minFov; ///< FoV下限
     float m_maxFov; ///< FoV上限
 
+    QVector3D m_minBound, m_maxBound; // 相机移动范围
+
 private:
     // ------------------------
     // 辅助函数
     // ------------------------
     QQuaternion eulerToQuat(float pitchDeg, float yawDeg, float rollDeg) const;
     QVector3D quatToEuler(const QQuaternion &quat) const;
+    QVector3D clampPosition(const QVector3D &pos);
 };

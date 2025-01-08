@@ -7,11 +7,13 @@
 Scene::Scene()
     : m_sceneName("Default Scene Name"), m_shaderManager(nullptr), m_backgroundShader(nullptr)
 {
+    m_camera.setMinBound({-1e5, -1.8, -1e5});
 }
 
 Scene::Scene(const QString &name)
     : m_sceneName(name), m_shaderManager(nullptr), m_backgroundShader(nullptr)
 {
+    m_camera.setMinBound({-1e5, -1.8, -1e5});
 }
 
 Scene::~Scene()

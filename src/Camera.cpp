@@ -4,8 +4,10 @@
 
 Camera::Camera()
     : m_position(0.0f, 0.0f, 3.0f), m_orientation(1.0f, 0.0f, 0.0f, 0.0f) // identity quaternion
-      ,
-      m_fov(45.0f), m_aspect(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(100.0f), m_minFov(10.0f), m_maxFov(90.0f)
+    , m_fov(45.0f), m_aspect(16.0f / 9.0f)
+    , m_nearPlane(0.1f), m_farPlane(100.0f)
+    , m_minFov(10.0f), m_maxFov(90.0f)
+    , m_minBound(-1e5, -1e5, -1e5), m_maxBound(1e5, 1e5, 1e5)
 {
 }
 
@@ -15,7 +17,11 @@ Camera::Camera(const QVector3D &position,
                float aspect,
                float nearPlane,
                float farPlane)
-    : m_position(position), m_orientation(orientation.normalized()), m_fov(fovDeg), m_aspect(aspect), m_nearPlane(nearPlane), m_farPlane(farPlane), m_minFov(1.0f), m_maxFov(90.0f)
+    : m_position(position), m_orientation(orientation.normalized())
+    , m_fov(fovDeg), m_aspect(aspect)
+    , m_nearPlane(nearPlane), m_farPlane(farPlane)
+    , m_minFov(1.0f), m_maxFov(90.0f)
+    , m_minBound(-1e5, -1e5, -1e5), m_maxBound(1e5, 1e5, 1e5)
 {
     if (nearPlane <= 0.0f || farPlane <= nearPlane)
     {
@@ -25,9 +31,37 @@ Camera::Camera(const QVector3D &position,
     }
 }
 
+void Camera::setMinBound(const QVector3D &minBound)
+{
+    if (minBound.z() > m_maxBound.z() || minBound.x() > m_maxBound.x() || minBound.y() > m_maxBound.y())
+    {
+        qWarning() << "Warning: Every coordinate of minBound should be smaller than maxBound.";
+        return;
+    }
+    m_minBound = minBound;
+}
+
+void Camera::setMaxBound(const QVector3D &maxBound)
+{
+    if (maxBound.z() < m_minBound.z() || maxBound.x() < m_minBound.x() || maxBound.y() < m_minBound.y())
+    {
+        qWarning() << "Warning: Every coordinate of maxBound should be greater than minBound.";
+        return;
+    }
+    m_maxBound = maxBound;
+}
+
+QVector3D Camera::clampPosition(const QVector3D &pos)
+{
+    float x = qBound(m_minBound.x(), pos.x(), m_maxBound.x());
+    float y = qBound(m_minBound.y(), pos.y(), m_maxBound.y());
+    float z = qBound(m_minBound.z(), pos.z(), m_maxBound.z());
+    return QVector3D(x, y, z);
+}
+
 void Camera::setPosition(const QVector3D &pos)
 {
-    m_position = pos;
+    m_position = clampPosition(pos);
 }
 
 void Camera::setOrientation(const QQuaternion &orientation)
@@ -97,21 +131,21 @@ void Camera::moveForward(float distance)
 {
     // 根据当前视角的前方向移动 (相机的 -Z 方向)
     QVector3D forward = m_orientation.rotatedVector(QVector3D(0.0f, 0.0f, -1.0f));
-    m_position += forward * distance;
+    m_position = clampPosition(m_position + forward * distance);
 }
 
 void Camera::moveRight(float distance)
 {
     // 根据当前视角的右方向移动 (相机的 +X 方向)
     QVector3D right = m_orientation.rotatedVector(QVector3D(1.0f, 0.0f, 0.0f));
-    m_position += right * distance;
+    m_position = clampPosition(m_position + right * distance);
 }
 
 void Camera::moveUp(float distance)
 {
     // 始终沿全局 Y 轴移动 (世界坐标系的 up 方向)
     QVector3D up(0.0f, 1.0f, 0.0f);
-    m_position += up * distance;
+    m_position = clampPosition(m_position + up * distance);
 }
 
 void Camera::rotate(const QVector3D &axis, float angleDeg)
