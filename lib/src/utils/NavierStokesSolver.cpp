@@ -52,7 +52,6 @@ void NavierStokesSolver::setZeroMean(Vec &x)
     {
         x[i] -= s;
     }
-
 }
 
 void NavierStokesSolver::computeTransport()
@@ -81,8 +80,8 @@ void NavierStokesSolver::timeStep(double dt, double nu)
 {
     int iter1 = 0, iter2;
     double rel_error;
-    Timer timer;
-    timer.start();
+    // Timer timer;
+    // timer.start();
 
     computeStream(&iter1);
     computeTransport();
@@ -95,6 +94,6 @@ void NavierStokesSolver::timeStep(double dt, double nu)
     conjugateGradientSolve(A, MOmega, Omega, r, p, Ap, &rel_error, &iter2, tol, 1000);
     setZeroMean(Omega);
     t += dt;
-    std::cout << "Iter2: " << iter2;
-    timer.stop(" total time");
+    // std::cout << "Iter2: " << iter2;
+    // timer.stop(" total time");
 }
