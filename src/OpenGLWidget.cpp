@@ -74,8 +74,8 @@ void OpenGLWidget::initializeGL()
     // 在这里加载所需要的所有shader
     m_shaderManager = QSharedPointer<ShaderManager>::create();
 
-    m_shaderManager->loadShader("basic", ":/vertex_shader.glsl",
-                                ":/fragment_shader.glsl");
+    m_shaderManager->loadShader("basic", ":/basic_vertex.glsl",
+                                ":/basic_fragment.glsl");
 }
 
 void OpenGLWidget::resizeGL(int w, int h)
