@@ -15,6 +15,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::initLayout()
 {
+
     // 初始化布局，左侧面板，右侧OpenGLWidget，中间使用Splitter分割
     m_leftPanel = new LeftPanel(this);
     m_openGLWidget = new OpenGLWidget(this);
@@ -31,3 +32,5 @@ void MainWindow::initLayout()
     // 设置主窗口的中央部件
     setCentralWidget(m_splitter);
 }
+
+

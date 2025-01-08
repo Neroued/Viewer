@@ -20,6 +20,8 @@ public:
 // private slots:
 //     // 信号与槽，定义一些槽函数，用来与其他组件之间进行通信
 
+private slots:
+
 private:
     void initLayout();
 

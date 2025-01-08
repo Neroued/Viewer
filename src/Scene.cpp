@@ -3,7 +3,6 @@
 #include <QMatrix4x4>
 #include <QOpenGLExtraFunctions> 
 
-#include <iostream>
 
 Scene::Scene()
     : m_sceneName("Default Scene Name"), m_shaderManager(nullptr), m_backgroundShader(nullptr)

@@ -5,7 +5,6 @@
 #include <QString>
 #include <QSharedPointer>
 #include <QMap>
-#include <vector>
 
 #include <Scene.h>
 #include <InputController.h>
