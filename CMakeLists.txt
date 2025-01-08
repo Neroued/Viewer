@@ -26,6 +26,8 @@ include_directories(include/)
 # 需要头文件路径，用来添加Q_OBJECT宏
 qt_add_executable(Qttest ${SOURCES} ${HEADERS} ${RES_SOURCES} tests/Qttest.cpp)
 
+# 关闭终端输出窗口
+# set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE) 
 
 set(CMAKE_WIN32_EXECUTABLE ON)
 

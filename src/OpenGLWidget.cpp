@@ -130,9 +130,10 @@ void OpenGLWidget::setInputControllerCamera()
         return;
     }
 
-    if (m_currentScene)
+    if (!m_currentScene)
     {
         qWarning() << "Error: No Current Scene.";
+        return;
     }
 
     // 把当前场景的相机交给InputController
