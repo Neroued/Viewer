@@ -12,6 +12,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <random>
 
 static double test_f(const Vec3 &pos, double omega_0 = 1.0, double sigma = 1.0)
 {
@@ -28,9 +29,9 @@ static double test_f(const Vec3 &pos, double omega_0 = 1.0, double sigma = 1.0)
     // omega = 100 * z * std::exp(-50 * z * z) * (1 + 0.5 * cos(20 * theta));
 
     // 基于二维高斯分布生成涡量
-    omega = omega_0 * std::exp(-r_squared / (2.0 * sigma * sigma)) * (1.0 + 0.5 * std::cos(10.0 * theta) * z);
+    // omega = omega_0 * std::exp(-r_squared / (2.0 * sigma * sigma)) * (1.0 + 0.5 * std::cos(10.0 * theta) * z);
 
-    // omega = 100 * z * std::exp(-50 * r_squared) * (1.0 + 0.5 * std::cos(20 * theta));
+    omega = 100 * z * std::exp(-50 * r_squared) * (1.0 + 0.5 * std::cos(20 * theta));
     return omega;
 }
 
@@ -60,7 +61,7 @@ public:
             m_solver.Omega[i] = test_f(m_solver.mesh.vertices[i], 0.5, 1.5);
         }
 
-        m_obj->setObjectType(ObjectType::SEMI_STATIC);
+        m_obj->setObjectType(ObjectType::STATIC);
         colorBufferFront = generateColors(m_solver.Omega);
         colorBufferBack = colorBufferFront; // 初始化后缓冲区
         m_obj->setColorBuffer(colorBufferFront);
@@ -68,7 +69,7 @@ public:
         m_obj->setDrawMode(DrawMode::FILL);
 
         // 启动计算线程
-        computeThread = std::thread(&NSController::computeLoop, this);
+        // computeThread = std::thread(&NSController::computeLoop, this);
     }
 
     ~NSController()
@@ -83,9 +84,10 @@ public:
 
     void update(double dt)
     {
+        return;
         // 渲染线程中调用：将前缓冲区的数据加载到渲染对象
-        std::unique_lock<std::mutex> lock(dataMutex);
-        m_obj->setColorBuffer(colorBufferFront);
+        // std::unique_lock<std::mutex> lock(dataMutex);
+        // m_obj->setColorBuffer(colorBufferFront);
     }
 
 private:
@@ -191,43 +193,73 @@ int main(int argc, char *argv[])
     obj->setDrawMode(DrawMode::WIREFRAME);
     obj->setShaderManager(gl->m_shaderManager);
     obj->setShader("basic");
-    auto model = obj->getModelMatrix();
 
-    Mesh mesh2(10, CUBE);
-    auto obj2 = QSharedPointer<Object>::create();
-    obj2->setObjectType(ObjectType::STATIC);
-    obj2->loadFromMesh(mesh2);
-    obj2->setDrawMode(DrawMode::WIREFRAME);
-    // obj2->setScale(glm::vec3(2.0f, 1.0f, 0.5f));
-    obj2->setPosition(QVector3D(2.0f, 0.0f, 2.0f));
-    obj2->setShaderManager(gl->m_shaderManager);
-    obj2->setShader("basic");
+    // Mesh mesh2(10, CUBE);
+    // auto obj2 = QSharedPointer<Object>::create();
+    // obj2->setObjectType(ObjectType::STATIC);
+    // obj2->loadFromMesh(mesh2);
+    // obj2->setDrawMode(DrawMode::WIREFRAME);
+    // // obj2->setScale(glm::vec3(2.0f, 1.0f, 0.5f));
+    // obj2->setPosition(QVector3D(2.0f, 0.0f, 2.0f));
+    // obj2->setShaderManager(gl->m_shaderManager);
+    // obj2->setShader("basic");
 
     scene->addObject(obj);
-    scene->addObject(obj2);
+    // scene->addObject(obj2);
 
-    // 创建大量对象
-    int n = 100;
-    for (int i = 0; i < n; ++i)
+    // 定义随机引擎
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> positionDis(-0.2f, 0.2f); // 随机位置偏移
+    std::uniform_real_distribution<float> scaleDis(0.1f, 0.3f);     // 随机缩放
+    std::uniform_real_distribution<float> colorDis(0.0f, 1.0f);     // 随机颜色
+
+    Mesh mesh_alot(20, SPHERE);
+    int n = 10;
+    for (int k = 0; k < n; ++k)
     {
-        auto obj = QSharedPointer<Object>::create();
-        obj->setObjectType(ObjectType::STATIC);
-        obj->loadFromMesh(mesh);
-        obj->setDrawMode(DrawMode::WIREFRAME);
-        obj->setShaderManager(gl->m_shaderManager);
-        obj->setShader("basic");
-        obj->setPosition(QVector3D(2.0f, (float)(i), 2.0f));
-        scene->addObject(obj);
+        for (int i = 0; i < n; ++i)
+        {
+            for (int j = 0; j < n; ++j)
+            {
+                auto obj = QSharedPointer<Object>::create();
+                obj->setObjectType(ObjectType::STATIC);
+                obj->loadFromMesh(mesh_alot);
+                obj->setDrawMode(DrawMode::FILL);
+                obj->setShaderManager(gl->m_shaderManager);
+                obj->setShader("blinn_phong");
+
+                // 随机缩放
+                float scaleVariation = scaleDis(gen);
+                obj->setScale({scaleVariation, scaleVariation, scaleVariation});
+
+                // 随机位置偏移
+                float randomOffsetX = positionDis(gen);
+                float randomOffsetY = positionDis(gen);
+                float randomOffsetZ = positionDis(gen);
+                obj->setPosition(QVector3D((float)(i) + 4 + randomOffsetX,
+                                           (float)(j) + 4 + randomOffsetY,
+                                           2.0f + k + randomOffsetZ));
+
+                // 随机颜色
+                float red = colorDis(gen) * 0.3f + 0.7f; // 偏蓝色调
+                float green = colorDis(gen) * 0.5f + 0.5f;
+                float blue = colorDis(gen) * 0.2f + 0.8f;
+                obj->setColorBuffer({red, green, blue});
+
+                scene->addObject(obj);
+            }
+        }
     }
 
-    // 创建NS对象
-    auto obj3 = QSharedPointer<Object>::create();
-    obj3->setPosition(QVector3D(-2.0f, 0.0f, 2.0f));
-    obj3->setShaderManager(gl->m_shaderManager);
-    obj3->setShader("basic");
-    QSharedPointer<NSController> nsController = QSharedPointer<NSController>::create(50, SPHERE, obj3);
-    scene->addObject(obj3);
-    scene->addController(nsController);
+    // // 创建NS对象
+    // auto obj3 = QSharedPointer<Object>::create();
+    // obj3->setPosition(QVector3D(-2.0f, 0.0f, 2.0f));
+    // obj3->setShaderManager(gl->m_shaderManager);
+    // obj3->setShader("basic");
+    // QSharedPointer<NSController> nsController = QSharedPointer<NSController>::create(50, SPHERE, obj3);
+    // scene->addObject(obj3);
+    // scene->addController(nsController);
 
     // auto obj4 = std::make_shared<Object>();
     // std::shared_ptr<ObjectController> nsController2 = std::make_shared<NSController>(100, SPHERE, obj4);
@@ -235,6 +267,37 @@ int main(int argc, char *argv[])
     // obj4->attachShader(shader);
     // scene->addObject(obj4);
     // scene->addController(nsController2);
+
+    // 测试Blinn_Phong 光照
+    auto obj5 = QSharedPointer<Object>::create();
+    obj5->setPosition(QVector3D(4.0f, 0.0f, 0.0f));
+    obj5->setShaderManager(gl->m_shaderManager);
+    obj5->setShader("blinn_phong");
+    QSharedPointer<NSController> nsController3 = QSharedPointer<NSController>::create(50, SPHERE, obj5);
+    scene->addObject(obj5);
+    scene->addController(nsController3);
+
+    auto obj6 = QSharedPointer<Object>::create();
+    obj6->setObjectType(ObjectType::STATIC);
+    obj6->setDrawMode(DrawMode::FILL);
+    obj6->setPosition(QVector3D(2.0f, 0.0f, 0.0f));
+    obj6->setColorBuffer(nsController3->colorBufferFront);
+    Mesh m(50, SPHERE);
+    obj6->loadFromMesh(m);
+    obj6->setShaderManager(gl->m_shaderManager);
+    obj6->setShader("basic");
+    scene->addObject(obj6);
+
+    // 测试glb模型
+    // auto obj7 = QSharedPointer<Object>::create();
+    // obj7->setPosition(QVector3D(10.0f, 0.0f, 0.0f));
+    // obj7->setShaderManager(gl->m_shaderManager);
+    // obj7->setShader("blinn_phong");
+    // obj7->setObjectType(ObjectType::STATIC);
+    // obj7->setDrawMode(DrawMode::WIREFRAME);
+    // if (obj7->loadFromGLB(":/items/crates_and_barrels.glb"))
+    //     std::cout << "success" << std::endl;
+    // scene->addObject(obj7);
 
     gl->addScene(scene);
     gl->initializeScenes();

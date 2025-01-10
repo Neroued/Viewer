@@ -31,6 +31,8 @@ void MainWindow::initLayout()
 
     // 设置主窗口的中央部件
     setCentralWidget(m_splitter);
+
+    connect(m_openGLWidget, &OpenGLWidget::fpsUpdated, m_leftPanel, &LeftPanel::onFPSUpdated);
 }
 
 

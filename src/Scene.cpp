@@ -1,8 +1,7 @@
 #include "Scene.h"
 #include <QDebug>
 #include <QMatrix4x4>
-#include <QOpenGLExtraFunctions> 
-
+#include <QOpenGLExtraFunctions>
 
 Scene::Scene()
     : m_sceneName("Default Scene Name"), m_shaderManager(nullptr), m_backgroundShader(nullptr)
@@ -51,6 +50,24 @@ void Scene::draw()
 
         shader->setUniformValue("uView", view);
         shader->setUniformValue("uProjection", projection);
+
+        // 3) 设置光照相关 Uniform
+        // 视点 (相机) 位置
+        QVector3D viewPos = m_camera.getPosition();
+        shader->setUniformValue("uViewPos", viewPos);
+
+        // 光源位置、颜色、参数
+        QVector3D lightPos(10.0f, 10.0f, 10.0f);
+        QVector3D lightColor(1.0f, 1.0f, 1.0f);
+        float ambientStrength = 0.2f;
+        float specularStrength = 0.5f;
+        float shininess = 32.0f;
+
+        shader->setUniformValue("uLightPos", lightPos);
+        shader->setUniformValue("uLightColor", lightColor);
+        shader->setUniformValue("uAmbientStrength", ambientStrength);
+        shader->setUniformValue("uSpecularStrength", specularStrength);
+        shader->setUniformValue("uShininess", shininess);
 
         obj->draw();
     }
@@ -129,6 +146,16 @@ void Scene::initializeGroundBuffers(const QVector3D &groundColor)
         1.0f, 0.0f, 1.0f,
         -1.0f, 0.0f, 1.0f};
 
+    // Ground normals (法向量：面朝上)
+    float groundNormals[] = {
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f};
+
     // Ground colors
     float r = groundColor.x();
     float g = groundColor.y();
@@ -156,13 +183,22 @@ void Scene::initializeGroundBuffers(const QVector3D &groundColor)
 
     m_groundVBO.release();
 
+    m_groundNBO.create();
+    m_groundNBO.bind();
+    m_groundNBO.allocate(groundNormals, sizeof(groundNormals));
+
+    m_backgroundShader->enableAttributeArray(1); // 法向量属性：location = 1
+    m_backgroundShader->setAttributeBuffer(1, GL_FLOAT, 0, 3);
+
+    m_groundNBO.release();
+
     // 创建 CBO（颜色缓冲）
     m_groundCBO.create();
     m_groundCBO.bind();
     m_groundCBO.allocate(groundColors, sizeof(groundColors));
 
-    m_backgroundShader->enableAttributeArray(1); // 颜色属性：location = 1
-    m_backgroundShader->setAttributeBuffer(1, GL_FLOAT, 0, 3);
+    m_backgroundShader->enableAttributeArray(2); // 颜色属性：location = 2
+    m_backgroundShader->setAttributeBuffer(2, GL_FLOAT, 0, 3);
 
     m_groundCBO.release();
     m_groundVAO.release();

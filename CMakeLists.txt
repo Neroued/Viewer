@@ -13,21 +13,24 @@ qt_standard_project_setup()
 # 源文件列表
 file(GLOB SOURCES src/*.cpp)
 file(GLOB HEADERS include/*.h)
-set(SHADER_QRC shaders/shaders.qrc)
+set(UI_FILE include/LeftPanel.ui)
+set(SHADER_QRC resources/shaders/shaders.qrc)
+set(ITEM_QRC resources/items/items.qrc)
 
-qt_add_resources(RES_SOURCES ${SHADER_QRC})
+qt_add_resources(RES_SOURCES ${SHADER_QRC} ${ITEM_QRC})
 
 
 # 添加子目录和头文件路径
 add_subdirectory(lib)
 include_directories(include/)
+include_directories(extern/tinygltf)
 
 
 # 需要头文件路径，用来添加Q_OBJECT宏
-qt_add_executable(Qttest ${SOURCES} ${HEADERS} ${RES_SOURCES} tests/Qttest.cpp)
+qt_add_executable(Qttest ${SOURCES} ${HEADERS} ${RES_SOURCES} ${UI_FILE} tests/Qttest.cpp)
 
 # 关闭终端输出窗口
-# set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE) 
+set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE)
 
 set(CMAKE_WIN32_EXECUTABLE ON)
 

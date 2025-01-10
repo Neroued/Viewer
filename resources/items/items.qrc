@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/items">
+        <file>crates_and_barrels.glb</file>
+    </qresource>
+</RCC>

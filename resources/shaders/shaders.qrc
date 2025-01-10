@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/shaders">
+        <file>basic_fragment.glsl</file>
+        <file>basic_vertex.glsl</file>
+        <file>blinn_phong_vertex.glsl</file>
+        <file>blinn_phong_fragment.glsl</file>
+    </qresource>
+</RCC>

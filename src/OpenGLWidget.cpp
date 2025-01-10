@@ -25,7 +25,7 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
             {
                 update(); // 这会触发 paintGL()
             });
-    timer->start(8); // 限制触发帧率
+    timer->start(4); // 限制触发帧率
 
     m_inputController = new InputController(this); // 创建inputController
     setFocusPolicy(Qt::StrongFocus);               // 设置焦点，接受键盘输入
@@ -55,7 +55,7 @@ void OpenGLWidget::addScene(QSharedPointer<Scene> &scene)
 
 void OpenGLWidget::changeScene(const QString &name)
 {
-    //TODO: 需要在切换场景前停止上一个场景的一些计算
+    // TODO: 需要在切换场景前停止上一个场景的一些计算
     auto it = m_scenes.find(name);
     if (it != m_scenes.end())
     {
@@ -74,8 +74,10 @@ void OpenGLWidget::initializeGL()
     // 在这里加载所需要的所有shader
     m_shaderManager = QSharedPointer<ShaderManager>::create();
 
-    m_shaderManager->loadShader("basic", ":/basic_vertex.glsl",
-                                ":/basic_fragment.glsl");
+    m_shaderManager->loadShader("basic", ":/shaders/basic_vertex.glsl", ":/shaders/basic_fragment.glsl");
+    m_shaderManager->loadShader("blinn_phong", ":/shaders/blinn_phong_vertex.glsl", ":/shaders/blinn_phong_fragment.glsl");
+
+    m_timer.start(); // 初始化计时器
 }
 
 void OpenGLWidget::resizeGL(int w, int h)
@@ -119,6 +121,17 @@ void OpenGLWidget::paintGL()
         QVector3D groundColor(0.75f, 0.75f, 0.75f);       // 淡灰色
         m_currentScene->drawBackgroundAndGround(skyColor, groundColor);
         m_currentScene->draw();
+    }
+
+    // FPS calculation
+    m_frameCount++;
+    qint64 elapsed = m_timer.elapsed();
+    if (elapsed >= 1000) // Calculate FPS every second
+    {
+        float fps = m_frameCount * 1000.0f / elapsed;
+        emit fpsUpdated(fps); // Emit the FPS update signal
+        m_frameCount = 0;     // Reset the frame count
+        m_timer.restart();    // Restart the timer
     }
 }
 

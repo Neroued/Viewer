@@ -5,6 +5,7 @@
 #include <QString>
 #include <QSharedPointer>
 #include <QMap>
+#include <QElapsedTimer>
 
 #include <Scene.h>
 #include <InputController.h>
@@ -25,17 +26,22 @@ public:
     void changeScene(const QString &name);
     void initializeScenes(); // 在添加场景后，再将场景初始化
 
+signals:
+    void fpsUpdated(float fps);
+
 protected:
     void initializeGL() override;                  // 在Widget被显示前第一次调用，且只调用一次
     void resizeGL(int width, int height) override; // 窗口大小变化时调用
     void paintGL() override;                       // 每次绘制时调用
 
 private:
-    QString m_title; 
+    QString m_title;
     float m_width, m_height;
+    QElapsedTimer m_timer; // 用于计时的 QTime
+    int m_frameCount;      // 帧计数
 
     QMap<QString, QSharedPointer<Scene>> m_scenes; // 存储的全部场景
-    QSharedPointer<Scene> m_currentScene;            // 当前场景
+    QSharedPointer<Scene> m_currentScene;          // 当前场景
 
     InputController *m_inputController; // 使用一个inputController来处理鼠标和键盘事件
 

@@ -65,5 +65,6 @@ private:
     QOpenGLShaderProgram *m_backgroundShader; 
     QOpenGLVertexArrayObject m_groundVAO;
     QOpenGLBuffer m_groundVBO;
+    QOpenGLBuffer m_groundNBO;
     QOpenGLBuffer m_groundCBO;
 };

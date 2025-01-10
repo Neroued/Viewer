@@ -53,6 +53,7 @@ public:
     QMatrix4x4 getModelMatrix();
 
     void loadFromMesh(const Mesh &mesh);
+    bool loadFromGLB(const QString &filePath);
 
     void setShaderManager(QSharedPointer<ShaderManager> manager) { if (manager) m_shaderManager = manager; }
     void setShader(const QString &shaderName);
@@ -71,10 +72,12 @@ private:
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vertexBuffer;
     QOpenGLBuffer m_indexBuffer;
+    QOpenGLBuffer m_normalBuffer;
     QOpenGLBuffer m_colorBuffer;
 
     std::vector<float> m_vertices;       // 每三个元素表示一个点的坐标
     std::vector<unsigned int> m_indices; // 每三个元素表示一个三角形的三个顶点
+    std::vector<float> m_normals;
     std::vector<float> m_colorBufferData;
 
     QVector3D m_position;
