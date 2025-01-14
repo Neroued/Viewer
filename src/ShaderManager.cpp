@@ -2,6 +2,13 @@
 #include <QFile>
 #include <QDebug>
 
+// 获取单例
+ShaderManager *ShaderManager::instance()
+{
+    static ShaderManager s_instance;
+    return &s_instance;
+}
+
 ShaderManager::ShaderManager()
 {
     // 需要在 QOpenGLWidget::initializeGL() 或之后进行。

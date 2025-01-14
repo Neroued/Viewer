@@ -70,9 +70,9 @@ void OpenGLWidget::initializeGL()
     glEnable(GL_DEPTH_TEST); // 启用深度测试
     // glEnable(GL_CULL_FACE); // 背面剔除
 
-    // 创建ShaderManager
+    // 初次调用，创建ShaderManager
     // 在这里加载所需要的所有shader
-    m_shaderManager = QSharedPointer<ShaderManager>::create();
+    m_shaderManager = ShaderManager::instance();
 
     m_shaderManager->loadShader("basic", ":/shaders/basic_vertex.glsl", ":/shaders/basic_fragment.glsl");
     m_shaderManager->loadShader("blinn_phong", ":/shaders/blinn_phong_vertex.glsl", ":/shaders/blinn_phong_fragment.glsl");

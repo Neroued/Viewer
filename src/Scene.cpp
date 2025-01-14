@@ -4,13 +4,13 @@
 #include <QOpenGLExtraFunctions>
 
 Scene::Scene()
-    : m_sceneName("Default Scene Name"), m_shaderManager(nullptr), m_backgroundShader(nullptr)
+    : m_sceneName("Default Scene Name"), m_backgroundShader(nullptr)
 {
     m_camera.setMinBound({-1e5, -1.8, -1e5});
 }
 
 Scene::Scene(const QString &name)
-    : m_sceneName(name), m_shaderManager(nullptr), m_backgroundShader(nullptr)
+    : m_sceneName(name), m_backgroundShader(nullptr)
 {
     m_camera.setMinBound({-1e5, -1.8, -1e5});
 }
@@ -24,7 +24,7 @@ void Scene::initialize()
     // 初始化opengl函数，需要依赖现有的opengl context
     initializeOpenGLFunctions();
 
-    m_backgroundShader = m_shaderManager->getShader("basic");
+    m_backgroundShader = ShaderManager::instance()->getShader("basic");
 
     for (auto &obj : m_Objects)
     {
@@ -127,11 +127,6 @@ void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &
     m_groundVAO.release();
 
     m_backgroundShader->release();
-}
-
-void Scene::setShaderManager(QSharedPointer<ShaderManager> shaderManager)
-{
-    m_shaderManager = shaderManager;
 }
 
 void Scene::initializeGroundBuffers(const QVector3D &groundColor)

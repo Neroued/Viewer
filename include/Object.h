@@ -55,7 +55,6 @@ public:
     void loadFromMesh(const Mesh &mesh);
     bool loadFromGLB(const QString &filePath);
 
-    void setShaderManager(QSharedPointer<ShaderManager> manager) { if (manager) m_shaderManager = manager; }
     void setShader(const QString &shaderName);
     QOpenGLShaderProgram *getShader() const { return m_shader; }
     void setColorBuffer(const std::vector<float> &colorData);
@@ -86,12 +85,12 @@ private:
     QMatrix4x4 m_modelMatrix;
     bool m_shouldUpdateModelMatrix;
 
-    QSharedPointer<ShaderManager> m_shaderManager;
     QString m_shaderName;
     QOpenGLShaderProgram *m_shader; // 使用的shader，可与其他对象共享
     DrawMode m_drawMode;
     ObjectType m_objectType;
 
+    bool m_initialized = false; // 是否已初始化
 private:
     void uploadToBuffer();
     void updateBuffer();

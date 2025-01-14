@@ -10,7 +10,7 @@
 #include "Mesh.h" // 如果需要把 Mesh 解析为顶点索引
 
 Object::Object()
-    : m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f), m_shouldUpdateModelMatrix(true), m_shaderManager(nullptr), m_shaderName("basic"), m_shader(nullptr), m_drawMode(DrawMode::FILL), m_objectType(ObjectType::SEMI_STATIC)
+    : m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f), m_shouldUpdateModelMatrix(true), m_shaderName("basic"), m_shader(nullptr), m_drawMode(DrawMode::FILL), m_objectType(ObjectType::SEMI_STATIC)
 {
 }
 
@@ -40,10 +40,10 @@ void Object::initialize()
 
     uploadToBuffer();
 
-    if (m_shaderManager)
-    {
-        m_shader = m_shaderManager->getShader(m_shaderName);
-    }
+    // 设置shader
+    m_shader = ShaderManager::instance()->getShader(m_shaderName);
+
+    m_initialized = true;
 }
 
 // 变换相关
@@ -167,7 +167,8 @@ bool Object::loadFromGLB(const QString &filePath)
 
     // 使用 QFile 从 QRC 中读取文件内容
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly))
+    {
         qWarning() << "Failed to open GLB file from QRC:" << filePath;
         return false;
     }
@@ -180,11 +181,11 @@ bool Object::loadFromGLB(const QString &filePath)
 
     // 使用 TinyGLTF 加载二进制数据
     bool success_load = loader.LoadBinaryFromMemory(&model, &err, &warn, data.data(), data.size());
-    if (!success_load) {
+    if (!success_load)
+    {
         qWarning() << "Failed to parse GLB file:" << QString::fromStdString(err);
         return false;
     }
-
 
     // 提取网格信息（仅处理第一个网格）
     if (model.meshes.empty() || model.meshes[0].primitives.empty())
@@ -261,9 +262,9 @@ bool Object::loadFromGLB(const QString &filePath)
 void Object::setShader(const QString &shaderName)
 {
 
-    if (m_shaderManager) // 表示Object已创建，存在shaderManager
+    if (m_initialized) // 表示Object已创建
     {
-        auto s = m_shaderManager->getShader(shaderName);
+        auto s = ShaderManager::instance()->getShader(shaderName);
         if (s)
         {
             m_shader = s;
@@ -274,7 +275,7 @@ void Object::setShader(const QString &shaderName)
             qWarning() << "Warning: Shader name: " << shaderName << " Not Exist!";
         }
     }
-    else // 首次创建，还未绑定shaderManager
+    else // 首次创建，在初始化中绑定shader
     {
         m_shaderName = shaderName;
     }

@@ -181,8 +181,6 @@ int main(int argc, char *argv[])
 
     auto scene = QSharedPointer<Scene>::create();
     std::cout << "created scene" << std::endl;
-    scene->setShaderManager(gl->m_shaderManager);
-    std::cout << "setShaderManager" << std::endl;
 
     Mesh mesh(10, SPHERE);
 
@@ -191,7 +189,6 @@ int main(int argc, char *argv[])
     obj->setObjectType(ObjectType::STATIC);
     obj->loadFromMesh(mesh);
     obj->setDrawMode(DrawMode::WIREFRAME);
-    obj->setShaderManager(gl->m_shaderManager);
     obj->setShader("basic");
 
     // Mesh mesh2(10, CUBE);
@@ -226,7 +223,6 @@ int main(int argc, char *argv[])
                 obj->setObjectType(ObjectType::STATIC);
                 obj->loadFromMesh(mesh_alot);
                 obj->setDrawMode(DrawMode::FILL);
-                obj->setShaderManager(gl->m_shaderManager);
                 obj->setShader("blinn_phong");
 
                 // 随机缩放
@@ -271,7 +267,6 @@ int main(int argc, char *argv[])
     // 测试Blinn_Phong 光照
     auto obj5 = QSharedPointer<Object>::create();
     obj5->setPosition(QVector3D(4.0f, 0.0f, 0.0f));
-    obj5->setShaderManager(gl->m_shaderManager);
     obj5->setShader("blinn_phong");
     QSharedPointer<NSController> nsController3 = QSharedPointer<NSController>::create(50, SPHERE, obj5);
     scene->addObject(obj5);
@@ -284,7 +279,6 @@ int main(int argc, char *argv[])
     obj6->setColorBuffer(nsController3->colorBufferFront);
     Mesh m(50, SPHERE);
     obj6->loadFromMesh(m);
-    obj6->setShaderManager(gl->m_shaderManager);
     obj6->setShader("basic");
     scene->addObject(obj6);
 

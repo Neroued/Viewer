@@ -46,7 +46,7 @@ private:
     InputController *m_inputController; // 使用一个inputController来处理鼠标和键盘事件
 
 public:
-    QSharedPointer<ShaderManager> m_shaderManager; // 统一管理所有Shader, 共享给下属的Scene和Object
+    ShaderManager* m_shaderManager; // 统一管理所有Shader, 共享给下属的Scene和Object
 
 private:
     // -------------------

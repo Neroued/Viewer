@@ -1,16 +1,18 @@
 #pragma once
 
+#include <QObject>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
 #include <QString>
 #include <QMap>
 #include <QSharedPointer>
 
-
-class ShaderManager : protected QOpenGLFunctions
+// TODO:使用单例模式
+class ShaderManager : protected QOpenGLFunctions, public QObject
 {
+    QOBJECT_H
 public:
-    ShaderManager();
+    static ShaderManager *instance();
     ~ShaderManager();
 
     bool loadShader(const QString &name,
@@ -27,5 +29,6 @@ public:
     void clear();
 
 private:
+    ShaderManager();
     QMap<QString, QSharedPointer<QOpenGLShaderProgram>> m_shaders;
 };

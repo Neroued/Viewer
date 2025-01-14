@@ -49,14 +49,10 @@ public:
     void drawBackgroundAndGround(const QVector4D &skyColor,
                                  const QVector3D &groundColor);
 
-    void setShaderManager(QSharedPointer<ShaderManager> shaderManager);
-
 public:
     QString m_sceneName;
     Camera m_camera; ///< 相机对象(已用Qt方式重构)
 private:
-    QSharedPointer<ShaderManager> m_shaderManager;
-
     QVector<QSharedPointer<Object>> m_Objects;
     QVector<QSharedPointer<ObjectController>> m_controllers;
 
