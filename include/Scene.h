@@ -58,7 +58,7 @@ private:
 
     // 绘制背景相关
     void initializeGroundBuffers(const QVector3D &groundColor);
-    QOpenGLShaderProgram *m_backgroundShader; 
+    QSharedPointer<QOpenGLShaderProgram> m_backgroundShader; 
     QOpenGLVertexArrayObject m_groundVAO;
     QOpenGLBuffer m_groundVBO;
     QOpenGLBuffer m_groundNBO;

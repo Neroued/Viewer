@@ -62,13 +62,13 @@ bool ShaderManager::loadShader(const QString &name,
     return true;
 }
 
-QOpenGLShaderProgram *ShaderManager::getShader(const QString &name) const
+QSharedPointer<QOpenGLShaderProgram> ShaderManager::getShader(const QString &name) const
 {
     if (!m_shaders.contains(name))
     {
         return nullptr;
     }
-    return m_shaders.value(name).data(); // 返回原始指针
+    return m_shaders.value(name); // 返回原始指针
 }
 
 void ShaderManager::removeShader(const QString &name)

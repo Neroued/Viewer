@@ -7,10 +7,9 @@
 #include <QMap>
 #include <QSharedPointer>
 
-// TODO:使用单例模式
-class ShaderManager : protected QOpenGLFunctions, public QObject
+class ShaderManager : public QObject, protected QOpenGLFunctions
 {
-    QOBJECT_H
+    Q_OBJECT
 public:
     static ShaderManager *instance();
     ~ShaderManager();
@@ -20,7 +19,7 @@ public:
                     const QString &fragmentShaderPath);
 
     // 获取已经加载好的着色器指针
-    QOpenGLShaderProgram *getShader(const QString &name) const;
+    QSharedPointer<QOpenGLShaderProgram> getShader(const QString &name) const;
 
     // 移除某个着色器（可选）
     void removeShader(const QString &name);
