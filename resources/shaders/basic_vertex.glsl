@@ -3,7 +3,7 @@
 // 顶点输入
 layout(location = 0) in vec3 aPosition;  // 位置   
 layout(location = 1) in vec3 aNormal;   // 法向量
-layout(location = 2) in vec3 aColor;    // 颜色
+layout(location = 4) in vec3 aColor;    // 颜色
 
 // Uniform
 uniform mat4 uModel;      // 模型矩阵

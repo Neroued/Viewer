@@ -30,7 +30,7 @@ include_directories(extern/tinygltf)
 qt_add_executable(Qttest ${SOURCES} ${HEADERS} ${RES_SOURCES} ${UI_FILE} tests/Qttest.cpp)
 
 # 关闭终端输出窗口
-set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE)
+# set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE)
 
 set(CMAKE_WIN32_EXECUTABLE ON)
 

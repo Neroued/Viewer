@@ -29,6 +29,8 @@ public:
 signals:
     void fpsUpdated(float fps);
 
+    void vertexAndFaceInfoUpdated(const QVector<size_t> &info); // 转发信号
+
 protected:
     void initializeGL() override;                  // 在Widget被显示前第一次调用，且只调用一次
     void resizeGL(int width, int height) override; // 窗口大小变化时调用

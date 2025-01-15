@@ -13,6 +13,9 @@
 #include <Camera.h>
 #include <InputController.h>
 #include <Scene.h>
+#include <TextureManager.h>
+#include <MaterialManager.h>
+#include <ShaderManager.h>
 
 #include <Mesh.h>
 
@@ -33,6 +36,9 @@ OpenGLWidget::OpenGLWidget(QWidget *parent)
 
 OpenGLWidget::~OpenGLWidget()
 {
+    ShaderManager::instance()->clear();
+    MaterialManager::instance()->clearAll();
+    TextureManager::instance()->clearAll();
 }
 
 void OpenGLWidget::addScene(QSharedPointer<Scene> &scene)
@@ -40,6 +46,7 @@ void OpenGLWidget::addScene(QSharedPointer<Scene> &scene)
     if (scene && !m_scenes.contains(scene->m_sceneName))
     {
         m_scenes.insert(scene->m_sceneName, scene);
+        scene->setParent(this);
 
         // 若为首个插入的scene
         if (!m_currentScene)
@@ -70,12 +77,17 @@ void OpenGLWidget::initializeGL()
     glEnable(GL_DEPTH_TEST); // 启用深度测试
     // glEnable(GL_CULL_FACE); // 背面剔除
 
+    // 首次调用TextureManager
+    TextureManager::instance(this);
+    MaterialManager::instance(TextureManager::instance());
+
     // 初次调用，创建ShaderManager
     // 在这里加载所需要的所有shader
-    m_shaderManager = ShaderManager::instance();
+    m_shaderManager = ShaderManager::instance(this);
 
     m_shaderManager->loadShader("basic", ":/shaders/basic_vertex.glsl", ":/shaders/basic_fragment.glsl");
     m_shaderManager->loadShader("blinn_phong", ":/shaders/blinn_phong_vertex.glsl", ":/shaders/blinn_phong_fragment.glsl");
+    m_shaderManager->loadShader("pbr", ":/shaders/pbr_vertex.glsl", ":/shaders/pbr_fragment.glsl");
 
     m_timer.start(); // 初始化计时器
 }
@@ -158,6 +170,8 @@ void OpenGLWidget::setInputControllerCamera()
 
 void OpenGLWidget::initializeScenes()
 {
+    connect(m_currentScene.data(), &Scene::vertexAndFaceInfoUpdated, this, &OpenGLWidget::vertexAndFaceInfoUpdated);
+
     for (auto &scene : m_scenes)
     {
         scene->initialize();

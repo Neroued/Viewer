@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QObject>
 #include <QString>
 #include <QVector>
 #include <QSharedPointer>
@@ -18,8 +19,9 @@
  *   - 负责更新和渲染所有对象
  *   - 可以绘制背景与地面
  */
-class Scene : protected QOpenGLFunctions
+class Scene : public QObject, protected QOpenGLFunctions
 {
+    Q_OBJECT
 public:
     Scene();
     explicit Scene(const QString &name);
@@ -49,6 +51,9 @@ public:
     void drawBackgroundAndGround(const QVector4D &skyColor,
                                  const QVector3D &groundColor);
 
+signals:
+    void vertexAndFaceInfoUpdated(const QVector<size_t> &info);
+
 public:
     QString m_sceneName;
     Camera m_camera; ///< 相机对象(已用Qt方式重构)
@@ -63,4 +68,7 @@ private:
     QOpenGLBuffer m_groundVBO;
     QOpenGLBuffer m_groundNBO;
     QOpenGLBuffer m_groundCBO;
+
+    QPair<size_t, size_t> calculateVertexAndFaceCount() const; // 计算顶点与面数
+    void sendVertexAndFaceInfo();
 };

@@ -24,10 +24,14 @@ void LeftPanel::setupUI()
     m_label = new QLabel("标签内容", this);
     m_slider = new QSlider(Qt::Horizontal, this);
     m_fpsLabel = new QLabel("FPS: 0", this); // 初始化 FPS 显示标签
+    m_vertexCount = new QLabel("顶点数：0", this);
+    m_faceCount = new QLabel("面数： 0", this);
 
     // 设置布局
     m_layout = new QVBoxLayout(this);
     m_layout->addWidget(m_fpsLabel); // 添加 FPS 标签到布局
+    m_layout->addWidget(m_vertexCount);
+    m_layout->addWidget(m_faceCount);
     m_layout->addWidget(m_button);
     m_layout->addWidget(m_label);
     m_layout->addWidget(m_slider);
@@ -45,4 +49,10 @@ void LeftPanel::updateFPS(float fps)
 void LeftPanel::onFPSUpdated(float fps)
 {
     updateFPS(fps);
+}
+
+void LeftPanel::setInfo(const QVector<size_t> &info)
+{
+    m_vertexCount->setText(QString("Vertices: %1").arg(info[0]));
+    m_faceCount->setText(QString("Faces: %1").arg(info[1]));
 }

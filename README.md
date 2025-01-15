@@ -1,5 +1,35 @@
 # Viewer
 
+## 增加一个Object的类别
+
+修改原有的ObjectType，使用FEM 和 MATERIAL来表示两种Object类型。
+
+FEM用于展示FEM求解结果，数据使用DYNAMIC方式上传
+
+MATERIAL使用Material类表示材质信息，主要区别是是否使用baseColor。
+
+
+
+纹理的使用流程：
+
+TextureManager读取并创建纹理， --> Material获取纹理对应的指针 --> 渲染时按顺序激活纹理单元，并绑定对应的纹理。
+
+
+
+
+
+## 添加材质，添加pbr光照
+
+添加模型的材质功能，主要支持pbr光照，同时保留blinn-phong光照的支持
+
+Object需要顶点坐标、三角形下标数组、材质uv坐标等信息
+
+对于用来展示FEM结果的object保留使用颜色缓冲区方式。
+
+
+
+
+
 ## 使用Qt框架重构
 
 在原有基础上，添加一个MainWindow作为程序的主窗口，管理UI以及OpenGLWidget。

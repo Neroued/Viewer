@@ -30,6 +30,8 @@ void Scene::initialize()
     {
         obj->initialize();
     }
+
+    sendVertexAndFaceInfo();
 }
 
 void Scene::draw()
@@ -75,6 +77,7 @@ void Scene::draw()
 
 void Scene::addObject(const QSharedPointer<Object> &obj)
 {
+    obj->setParent(this);
     m_Objects.push_back(obj);
 }
 
@@ -192,9 +195,35 @@ void Scene::initializeGroundBuffers(const QVector3D &groundColor)
     m_groundCBO.bind();
     m_groundCBO.allocate(groundColors, sizeof(groundColors));
 
-    m_backgroundShader->enableAttributeArray(2); // 颜色属性：location = 2
-    m_backgroundShader->setAttributeBuffer(2, GL_FLOAT, 0, 3);
+    m_backgroundShader->enableAttributeArray(4); // 颜色属性：location = 4
+    m_backgroundShader->setAttributeBuffer(4, GL_FLOAT, 0, 3);
 
     m_groundCBO.release();
     m_groundVAO.release();
+}
+
+QPair<size_t, size_t> Scene::calculateVertexAndFaceCount() const
+{
+    size_t totalVertices = 0;
+    size_t totalFaces = 0;
+
+    for (const auto &obj : m_Objects)
+    {
+        if (obj)
+        {
+            totalVertices += obj->getVerticesSize();
+            totalFaces += obj->getIndicesSize() / 3;
+        }
+    }
+
+    return qMakePair(totalVertices, totalFaces);
+}
+
+void Scene::sendVertexAndFaceInfo()
+{
+    auto [totalVertices, totalFaces] = calculateVertexAndFaceCount();
+
+    QVector<size_t> info = {totalVertices, totalFaces};
+
+    emit vertexAndFaceInfoUpdated(info);
 }

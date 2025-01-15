@@ -1,4 +1,5 @@
 #include "Object.h"
+#include "MaterialManager.h"
 #include <QDebug>
 #include <QFile>
 
@@ -9,13 +10,43 @@
 
 #include "Mesh.h" // 如果需要把 Mesh 解析为顶点索引
 
-Object::Object()
-    : m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f), m_shouldUpdateModelMatrix(true), m_shaderName("basic"), m_shader(nullptr), m_drawMode(DrawMode::FILL), m_objectType(ObjectType::SEMI_STATIC)
+Object::Object(QObject *parent)
+    : QObject(parent)
+    , m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f)
+    , m_shouldUpdateModelMatrix(true)
+    , m_shaderName("basic"), m_shader(nullptr)
+    , m_drawMode(DrawMode::FILL), m_objectType(ObjectType::STATIC)
+    , m_materialName("default"), m_material(nullptr)
 {
 }
 
 Object::~Object()
 {
+}
+
+void Object::createBuffers()
+{
+    // Initialize Buffers
+    m_vertexBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_vertexBuffer.create();
+
+    m_indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+    m_indexBuffer.create();
+
+    m_colorBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_colorBuffer.create();
+
+    m_normalBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_normalBuffer.create();
+
+    m_tangentBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_tangentBuffer.create();
+
+    m_biTangentBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_biTangentBuffer.create();
+
+    m_texCoordBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    m_texCoordBuffer.create();
 }
 
 void Object::initialize()
@@ -28,20 +59,15 @@ void Object::initialize()
         qWarning() << "[Object] Failed to create VAO!";
     }
 
-    // Initialize Buffers
-    m_vertexBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-    m_vertexBuffer.create();
-
-    m_indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
-    m_indexBuffer.create();
-
-    m_colorBuffer = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-    m_colorBuffer.create();
-
+    // 创建并上传至buffer
+    createBuffers();
     uploadToBuffer();
 
-    // 设置shader
+    // 获取shader
     m_shader = ShaderManager::instance()->getShader(m_shaderName);
+
+    // 获取material
+    m_material = MaterialManager::instance()->getMaterial(m_materialName);
 
     m_initialized = true;
 }
@@ -62,7 +88,6 @@ void Object::setScale(const QVector3D &scl)
     m_scale = scl;
     m_shouldUpdateModelMatrix = true;
 }
-
 void Object::updateModelMatrix()
 {
     m_modelMatrix.setToIdentity();
@@ -72,7 +97,6 @@ void Object::updateModelMatrix()
 
     m_shouldUpdateModelMatrix = false;
 }
-
 QMatrix4x4 Object::getModelMatrix()
 {
     if (m_shouldUpdateModelMatrix)
@@ -259,6 +283,26 @@ bool Object::loadFromGLB(const QString &filePath)
     return true;
 }
 
+void Object::setMaterial(const QString &materialName)
+{
+    if (m_initialized)
+    {
+        auto m = MaterialManager::instance()->getMaterial(materialName);
+        if (m)
+        {
+            m_material = m;
+            m_materialName = materialName;
+        }
+        else
+        {
+            qWarning() << "Warning: Material name: " << materialName << " Not Exist!";
+        }
+    }
+    else
+    {
+        m_materialName = materialName;
+    }
+}
 void Object::setShader(const QString &shaderName)
 {
 
@@ -285,7 +329,6 @@ void Object::setDrawMode(DrawMode mode)
 {
     m_drawMode = mode;
 }
-
 DrawMode Object::getDrawMode() const
 {
     return m_drawMode;
@@ -295,7 +338,6 @@ void Object::setObjectType(ObjectType type)
 {
     m_objectType = type;
 }
-
 ObjectType Object::getObjectType() const
 {
     return m_objectType;
@@ -306,6 +348,39 @@ void Object::setColorBuffer(const std::vector<float> &colorData)
     m_colorBufferData = colorData;
 }
 
+static void fillData(std::vector<float> &data, std::size_t targetSize, std::vector<float> defaultValue)
+// 将data补充至目标大小
+// 若为空则使用默认值填充
+{
+    if (!data.empty())
+    {
+        std::size_t count = data.size() / 3;
+
+        if (count < targetSize)
+        {
+            data.reserve(targetSize * 3);
+            float last[3] = {data[count * 3 - 3], data[count * 3 - 2], data[count * 3 - 1]};
+
+            for (std::size_t i = count; i < targetSize; ++i)
+            {
+                data.push_back(last[0]);
+                data.push_back(last[1]);
+                data.push_back(last[2]);
+            }
+        }
+    }
+    else
+    {
+        data.resize(targetSize * 3);
+        for (std::size_t i = 0; i < targetSize; ++i)
+        {
+            data[i + 0] = defaultValue[0];
+            data[i + 1] = defaultValue[1];
+            data[i + 2] = defaultValue[2];
+        }
+    }
+}
+
 // ---------------------------------------------------------
 // Buffer upload / update
 // ---------------------------------------------------------
@@ -314,96 +389,75 @@ void Object::uploadToBuffer()
     // 绑定VAO
     m_vao.bind();
 
-    // === Vertex Buffer ===
+    /* ===== Vertex Buffer ===== */
+    /* ====== location = 0 ======*/
     m_vertexBuffer.bind();
     QOpenGLBuffer::UsagePattern usage = QOpenGLBuffer::StaticDraw;
-    if (m_objectType == ObjectType::DYNAMIC)
-    {
-        usage = QOpenGLBuffer::DynamicDraw;
-    }
     m_vertexBuffer.setUsagePattern(usage);
     m_vertexBuffer.allocate(m_vertices.data(), int(m_vertices.size() * sizeof(float)));
-
-    // 顶点属性 (location=0), 3个float
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
-    // === Index Buffer ===
+    std::size_t vertexCount = m_vertices.size() / 3;
+
+    /* ===== Index Buffer ===== */
     m_indexBuffer.bind();
     m_indexBuffer.setUsagePattern(usage);
     m_indexBuffer.allocate(m_indices.data(), int(m_indices.size() * sizeof(unsigned int)));
     // Note: QOpenGLBuffer::IndexBuffer is automatically bound to GL_ELEMENT_ARRAY_BUFFER
 
-    // === Normal Buffer ===
+    /* ===== Normal Buffer ===== */
+    /* ====== location = 1 ======*/
     m_normalBuffer.bind();
     m_normalBuffer.setUsagePattern(usage);
-    if (!m_normals.empty())
-    {
-        m_normalBuffer.allocate(m_normals.data(),
-                                int(m_normals.size() * sizeof(float)));
-    }
-    else
-    {
-        // 如果法向量数据为空，分配一个默认法向量 (0, 0, 1)
-        float defaultNormal[3] = {0.0f, 0.0f, 1.0f};
-        m_normalBuffer.allocate(defaultNormal, int(sizeof(defaultNormal)));
-    }
-    // 假定每个顶点3个float表示法向量
-    // (location=1)
+    fillData(m_normals, vertexCount, {0.0f, 0.0f, 1.0f});
+    m_normalBuffer.allocate(m_normals.data(), int(m_normals.size() * sizeof(float)));
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(1);
 
-    // === Color Buffer ===
-    // (location=2)
-    m_colorBuffer.bind();
-    QOpenGLBuffer::UsagePattern colorUsage = usage;
-
-    // 根据对象类型设置 UsagePattern
-    if (m_objectType == ObjectType::SEMI_STATIC)
-    {
-        colorUsage = QOpenGLBuffer::DynamicDraw;
-    }
-    m_colorBuffer.setUsagePattern(colorUsage);
-
-    // 检查颜色缓冲区数据
-    if (!m_colorBufferData.empty())
-    {
-        // 确保颜色数据大小与顶点数量匹配
-        size_t vertexCount = m_vertices.size() / 3;       // 顶点数量 (每个顶点 3 个 float)
-        size_t colorCount = m_colorBufferData.size() / 3; // 颜色数量 (每个颜色 3 个 float)
-
-        if (colorCount < vertexCount)
-        {
-            // 获取最后一个颜色
-            float lastColor[3] = {
-                m_colorBufferData[colorCount * 3 - 3],
-                m_colorBufferData[colorCount * 3 - 2],
-                m_colorBufferData[colorCount * 3 - 1]};
-
-            // 填充缺少的颜色
-            for (size_t i = colorCount; i < vertexCount; ++i)
-            {
-                m_colorBufferData.push_back(lastColor[0]);
-                m_colorBufferData.push_back(lastColor[1]);
-                m_colorBufferData.push_back(lastColor[2]);
-            }
-        }
-
-        m_colorBuffer.allocate(m_colorBufferData.data(),
-                               int(m_colorBufferData.size() * sizeof(float)));
-    }
-    else
-    {
-        // 如果颜色数据为空，设置默认颜色
-        size_t vertexCount = m_vertices.size() / 3;
-        QVector<float> defaultColorData(vertexCount * 3, 0.0f); // 默认黑色填充
-        m_colorBuffer.allocate(defaultColorData.data(),
-                               int(defaultColorData.size() * sizeof(float)));
-    }
-
-    // 假定每个顶点 3 个 float 表示颜色
+    /* ===== Tangent Buffer ===== */
+    /* ======= location = 2 ======*/
+    m_tangentBuffer.bind();
+    m_tangentBuffer.setUsagePattern(usage);
+    fillData(m_tangent, vertexCount, {1.0f, 0.0f, 0.0f});
+    m_tangentBuffer.allocate(m_tangent.data(), int(m_tangent.size() * sizeof(float)));
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
+
+    /* ===== biTangent Buffer ===== */
+    /* ======= location = 3 ======*/
+    m_biTangentBuffer.bind();
+    m_biTangentBuffer.setUsagePattern(usage);
+    fillData(m_biTangent, vertexCount, {0.0f, 1.0f, 0.0f});
+    m_biTangentBuffer.allocate(m_biTangent.data(), int(m_biTangent.size() * sizeof(float)));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(3);
+
+    // 若为STATIC或FEM类型绑定colorBuffer
+    /* ===== Color Buffer ===== */
+    /* ====== location = 4 =====*/
+    if (m_objectType == ObjectType::FEM || m_objectType == ObjectType::STATIC)
+    {
+        m_colorBuffer.bind();
+        QOpenGLBuffer::UsagePattern colorUsage = (m_objectType == ObjectType::FEM) ? QOpenGLBuffer::DynamicDraw : QOpenGLBuffer::StaticDraw;
+        m_colorBuffer.setUsagePattern(colorUsage);
+        fillData(m_colorBufferData, vertexCount, {0.0f, 0.0f, 0.0f}); // 补全颜色信息，若空使用黑色填充
+        m_colorBuffer.allocate(m_colorBufferData.data(), int(m_colorBufferData.size() * sizeof(float)));
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(4);
+    }
+
+    // 若为MATERIAL类型，上传TexCoord
+    /* ===== TexCoord Buffer ===== */
+    /* ======== location = 5 ======*/
+    if (m_objectType == ObjectType::MATERIAL)
+    {
+        m_texCoordBuffer.bind();
+        m_texCoordBuffer.setUsagePattern(usage);
+        m_texCoordBuffer.allocate(m_texCoord.data(), int(m_texCoord.size() * sizeof(float)));
+        glVertexAttribPointer(5, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(5);
+    }
 
     m_vao.release();
 }
@@ -415,36 +469,13 @@ void Object::updateBuffer()
     // 根据 m_objectType 判断更新逻辑
     m_vao.bind();
 
-    if (m_objectType == ObjectType::DYNAMIC)
-    {
-        // 顶点 & 索引 & 颜色都更新
-        if (m_vertexBuffer.isCreated())
-        {
-            m_vertexBuffer.bind();
-            m_vertexBuffer.write(0, m_vertices.data(),
-                                 qint64(m_vertices.size() * sizeof(float)));
-        }
-        if (m_indexBuffer.isCreated())
-        {
-            m_indexBuffer.bind();
-            m_indexBuffer.write(0, m_indices.data(),
-                                qint64(m_indices.size() * sizeof(unsigned int)));
-        }
-        if (m_colorBuffer.isCreated() && !m_colorBufferData.empty())
-        {
-            m_colorBuffer.bind();
-            m_colorBuffer.write(0, m_colorBufferData.data(),
-                                qint64(m_colorBufferData.size() * sizeof(float)));
-        }
-    }
-    else if (m_objectType == ObjectType::SEMI_STATIC)
+    if (m_objectType == ObjectType::FEM)
     {
         // 仅更新 color
         if (m_colorBuffer.isCreated() && !m_colorBufferData.empty())
         {
             m_colorBuffer.bind();
-            m_colorBuffer.write(0, m_colorBufferData.data(),
-                                qint64(m_colorBufferData.size() * sizeof(float)));
+            m_colorBuffer.write(0, m_colorBufferData.data(), qint64(m_colorBufferData.size() * sizeof(float)));
         }
     }
     // STATIC 不更新
@@ -464,9 +495,8 @@ void Object::draw()
         uploadToBuffer();
     }
 
-    // 如果DYNAMIC/SEMI_STATIC，可能需要每帧更新
-    if (m_objectType == ObjectType::DYNAMIC ||
-        m_objectType == ObjectType::SEMI_STATIC)
+    // 如果为FEM，可能需要每帧更新颜色
+    if (m_objectType == ObjectType::FEM)
     {
         updateBuffer();
     }
@@ -482,8 +512,22 @@ void Object::draw()
     auto model = getModelMatrix();
     m_shader->setUniformValue("uModel", model);
 
+    if (m_objectType == ObjectType::FEM || m_objectType == ObjectType::STATIC)
+    {
+        m_shader->setUniformValue("uUseMaterial", false);
+    }
+    else if (m_objectType == ObjectType::MATERIAL)
+    {
+        m_shader->setUniformValue("uUseMaterial", true);
+    }
+
     // 绑定VAO
     m_vao.bind();
+
+    if (m_objectType == ObjectType::MATERIAL)
+    {
+        m_material->bindUniforms(m_shader);
+    }
 
     // 根据drawMode
     switch (m_drawMode)
@@ -522,3 +566,276 @@ void Object::drawFill()
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDrawElements(GL_TRIANGLES, GLsizei(m_indices.size()), GL_UNSIGNED_INT, nullptr);
 }
+
+void Object::loadCube()
+{
+    // 1. 清空旧数据
+    m_vertices.clear();
+    m_indices.clear();
+    m_normals.clear();
+    m_tangent.clear();
+    m_biTangent.clear();
+    m_texCoord.clear();
+
+    // 2. 定义每个面的顶点数据
+    //    为了让每个面都能完整使用 [0,1]x[0,1] 的纹理坐标，这里不共享顶点。
+    //    每个面 4 个顶点、2 个三角形 (6 个 index)；立方体共 6 个面 → 共 24 个顶点，36 个 index。
+
+    // 顶点顺序的约定：让每个面的四个顶点在视觉上逆时针 (CCW) 排列，以保证法线朝外。
+    // 比如 +X 面，朝着 +X 方向看时，顺序为“左下 → 左上 → 右上 → 右下”，这样法线是 (1,0,0)。
+
+    // -------------------- Face +X --------------------
+    {
+        // Normal (1,0,0), Tangent (0,1,0), Bitangent(0,0,1)
+        // 这里的 (0,1,0) 与 (0,0,1) 的选择只是一个参考，保证右手坐标系和 UV 对应即可。
+        QVector3D normal(1.0f, 0.0f, 0.0f);
+        QVector3D tangent(0.0f, 1.0f, 0.0f);
+        QVector3D bitangent(0.0f, 0.0f, 1.0f);
+
+        // 四个顶点：从“左下”到“左上”到“右上”到“右下”
+        // 由于面在 +X 侧，因此 x=+0.5 固定；y、z 在 [-0.5, 0.5] 内。
+        // UV 的分配让左下 -> uv(0,0), 左上 -> uv(0,1), 右上 -> uv(1,1), 右下 -> uv(1,0)
+        // （当然，你也可以按其他方式给四顶点分配 UV，只要保证纹理映射一致就行）
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceXPos[4] = {
+            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D( 0.5f,  0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
+            { QVector3D( 0.5f,  0.5f,  0.5f), QVector2D(1.0f, 1.0f) }, // right-top
+            { QVector3D( 0.5f, -0.5f,  0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+        };
+
+        // 将数据写入 m_vertices, m_normals, m_tangent, m_biTangent, m_texCoord
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceXPos[i].pos.x());
+            m_vertices.push_back(faceXPos[i].pos.y());
+            m_vertices.push_back(faceXPos[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceXPos[i].uv.x());
+            m_texCoord.push_back(faceXPos[i].uv.y());
+        }
+    }
+
+    // -------------------- Face -X --------------------
+    {
+        QVector3D normal(-1.0f, 0.0f, 0.0f);
+        QVector3D tangent(0.0f, 1.0f, 0.0f);
+        // normal x tangent = bitangent
+        QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,-1)
+
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceXNeg[4] = {
+            { QVector3D(-0.5f, -0.5f,  0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D(-0.5f,  0.5f,  0.5f), QVector2D(0.0f, 1.0f) }, // left-top
+            { QVector3D(-0.5f,  0.5f, -0.5f), QVector2D(1.0f, 1.0f) }, // right-top
+            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceXNeg[i].pos.x());
+            m_vertices.push_back(faceXNeg[i].pos.y());
+            m_vertices.push_back(faceXNeg[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceXNeg[i].uv.x());
+            m_texCoord.push_back(faceXNeg[i].uv.y());
+        }
+    }
+
+    // -------------------- Face +Y --------------------
+    {
+        QVector3D normal(0.0f, 1.0f, 0.0f);
+        QVector3D tangent(1.0f, 0.0f, 0.0f);
+        QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,1)
+
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceYPos[4] = {
+            { QVector3D(-0.5f, 0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D(-0.5f, 0.5f,  0.5f), QVector2D(0.0f, 1.0f) }, // left-top
+            { QVector3D( 0.5f, 0.5f,  0.5f), QVector2D(1.0f, 1.0f) }, // right-top
+            { QVector3D( 0.5f, 0.5f, -0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceYPos[i].pos.x());
+            m_vertices.push_back(faceYPos[i].pos.y());
+            m_vertices.push_back(faceYPos[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceYPos[i].uv.x());
+            m_texCoord.push_back(faceYPos[i].uv.y());
+        }
+    }
+
+    // -------------------- Face -Y --------------------
+    {
+        QVector3D normal(0.0f, -1.0f, 0.0f);
+        QVector3D tangent(1.0f, 0.0f, 0.0f);
+        QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,-1)
+
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceYNeg[4] = {
+            { QVector3D(-0.5f, -0.5f,  0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
+            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(1.0f, 1.0f) }, // right-top
+            { QVector3D( 0.5f, -0.5f,  0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceYNeg[i].pos.x());
+            m_vertices.push_back(faceYNeg[i].pos.y());
+            m_vertices.push_back(faceYNeg[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceYNeg[i].uv.x());
+            m_texCoord.push_back(faceYNeg[i].uv.y());
+        }
+    }
+
+    // -------------------- Face +Z --------------------
+    {
+        QVector3D normal(0.0f, 0.0f, 1.0f);
+        QVector3D tangent(1.0f, 0.0f, 0.0f);
+        QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,1,0)
+
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceZPos[4] = {
+            { QVector3D(-0.5f, -0.5f, 0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D( 0.5f, -0.5f, 0.5f), QVector2D(1.0f, 0.0f) }, // right-bottom
+            { QVector3D( 0.5f,  0.5f, 0.5f), QVector2D(1.0f, 1.0f) }, // right-top
+            { QVector3D(-0.5f,  0.5f, 0.5f), QVector2D(0.0f, 1.0f) }  // left-top
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceZPos[i].pos.x());
+            m_vertices.push_back(faceZPos[i].pos.y());
+            m_vertices.push_back(faceZPos[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceZPos[i].uv.x());
+            m_texCoord.push_back(faceZPos[i].uv.y());
+        }
+    }
+
+    // -------------------- Face -Z --------------------
+    {
+        QVector3D normal(0.0f, 0.0f, -1.0f);
+        QVector3D tangent(1.0f, 0.0f, 0.0f);
+        QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,-1,0)
+
+        struct VertexData {
+            QVector3D pos;
+            QVector2D uv;
+        } faceZNeg[4] = {
+            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f) }, // right-bottom
+            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
+            { QVector3D(-0.5f,  0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
+            { QVector3D( 0.5f,  0.5f, -0.5f), QVector2D(1.0f, 1.0f) }  // right-top
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            m_vertices.push_back(faceZNeg[i].pos.x());
+            m_vertices.push_back(faceZNeg[i].pos.y());
+            m_vertices.push_back(faceZNeg[i].pos.z());
+
+            m_normals.push_back(normal.x());
+            m_normals.push_back(normal.y());
+            m_normals.push_back(normal.z());
+
+            m_tangent.push_back(tangent.x());
+            m_tangent.push_back(tangent.y());
+            m_tangent.push_back(tangent.z());
+
+            m_biTangent.push_back(bitangent.x());
+            m_biTangent.push_back(bitangent.y());
+            m_biTangent.push_back(bitangent.z());
+
+            m_texCoord.push_back(faceZNeg[i].uv.x());
+            m_texCoord.push_back(faceZNeg[i].uv.y());
+        }
+    }
+
+    // 3. 准备 Index
+    //   按照“每个面 4 个顶点、2 个三角形”进行索引。
+    //   face i 对应的顶点起始下标为 offset = i*4。
+    //   Triangles = (offset, offset+1, offset+2), (offset, offset+2, offset+3)
+    const int faceCount = 6;
+    for (int i = 0; i < faceCount; ++i)
+    {
+        unsigned int offset = i * 4;
+        // 第一个三角形
+        m_indices.push_back(offset + 0);
+        m_indices.push_back(offset + 1);
+        m_indices.push_back(offset + 2);
+        // 第二个三角形
+        m_indices.push_back(offset + 0);
+        m_indices.push_back(offset + 2);
+        m_indices.push_back(offset + 3);
+    }
+}
+

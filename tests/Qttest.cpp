@@ -61,7 +61,7 @@ public:
             m_solver.Omega[i] = test_f(m_solver.mesh.vertices[i], 0.5, 1.5);
         }
 
-        m_obj->setObjectType(ObjectType::STATIC);
+        m_obj->setObjectType(ObjectType::FEM);
         colorBufferFront = generateColors(m_solver.Omega);
         colorBufferBack = colorBufferFront; // 初始化后缓冲区
         m_obj->setColorBuffer(colorBufferFront);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
     std::uniform_real_distribution<float> scaleDis(0.1f, 0.3f);     // 随机缩放
     std::uniform_real_distribution<float> colorDis(0.0f, 1.0f);     // 随机颜色
 
-    Mesh mesh_alot(20, SPHERE);
+    Mesh mesh_alot(15, SPHERE);
     int n = 10;
     for (int k = 0; k < n; ++k)
     {
@@ -287,11 +287,30 @@ int main(int argc, char *argv[])
     // obj7->setPosition(QVector3D(10.0f, 0.0f, 0.0f));
     // obj7->setShaderManager(gl->m_shaderManager);
     // obj7->setShader("blinn_phong");
-    // obj7->setObjectType(ObjectType::STATIC);
+    // obj7->setObjectType(ObjectType::FEM);
     // obj7->setDrawMode(DrawMode::WIREFRAME);
     // if (obj7->loadFromGLB(":/items/crates_and_barrels.glb"))
     //     std::cout << "success" << std::endl;
     // scene->addObject(obj7);
+
+    // 测试Material
+    auto obj8 = QSharedPointer<Object>(new Object);
+    obj8->loadCube();
+    obj8->setPosition(QVector3D(5.0f, 0.0f, 5.0f));
+    obj8->setShader("blinn_phong");
+    obj8->setDrawMode(DrawMode::FILL);
+    obj8->setObjectType(ObjectType::MATERIAL);
+    obj8->setMaterial("brick_wall");
+    scene->addObject(obj8);
+
+    auto obj9 = QSharedPointer<Object>(new Object);
+    obj9->loadCube();
+    obj9->setPosition(QVector3D(5.0f, 0.0f, 7.0f));
+    obj9->setShader("pbr");
+    obj9->setDrawMode(DrawMode::FILL);
+    obj9->setObjectType(ObjectType::MATERIAL);
+    obj9->setMaterial("SpaceBlanketFolds");
+    scene->addObject(obj9);
 
     gl->addScene(scene);
     gl->initializeScenes();

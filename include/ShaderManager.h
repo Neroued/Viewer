@@ -11,7 +11,7 @@ class ShaderManager : public QObject, protected QOpenGLFunctions
 {
     Q_OBJECT
 public:
-    static ShaderManager *instance();
+    static ShaderManager *instance(QObject *parent = nullptr);
     ~ShaderManager();
 
     bool loadShader(const QString &name,
@@ -28,6 +28,8 @@ public:
     void clear();
 
 private:
-    ShaderManager();
+    ShaderManager(QObject *parent = nullptr);
     QMap<QString, QSharedPointer<QOpenGLShaderProgram>> m_shaders;
+
+    static ShaderManager *m_instance;
 };

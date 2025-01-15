@@ -4,5 +4,7 @@
         <file>basic_vertex.glsl</file>
         <file>blinn_phong_vertex.glsl</file>
         <file>blinn_phong_fragment.glsl</file>
+        <file>pbr_fragment.glsl</file>
+        <file>pbr_vertex.glsl</file>
     </qresource>
 </RCC>

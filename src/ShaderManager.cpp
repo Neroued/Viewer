@@ -2,14 +2,24 @@
 #include <QFile>
 #include <QDebug>
 
+ShaderManager *ShaderManager::m_instance = nullptr;
+
 // 获取单例
-ShaderManager *ShaderManager::instance()
+ShaderManager *ShaderManager::instance(QObject *parent)
 {
-    static ShaderManager s_instance;
-    return &s_instance;
+    if (m_instance)
+    {
+        if (parent && !m_instance->parent())
+        {
+            m_instance->setParent(parent);
+        }
+        return m_instance;
+    }
+    m_instance = new ShaderManager(parent);
+    return m_instance;
 }
 
-ShaderManager::ShaderManager()
+ShaderManager::ShaderManager(QObject *parent)
 {
     // 需要在 QOpenGLWidget::initializeGL() 或之后进行。
     initializeOpenGLFunctions();

@@ -33,6 +33,8 @@ void MainWindow::initLayout()
     setCentralWidget(m_splitter);
 
     connect(m_openGLWidget, &OpenGLWidget::fpsUpdated, m_leftPanel, &LeftPanel::onFPSUpdated);
+
+    connect(m_openGLWidget, &OpenGLWidget::vertexAndFaceInfoUpdated, m_leftPanel, &LeftPanel::setInfo);
 }
 
 
