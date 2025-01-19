@@ -5,8 +5,9 @@
  * 这是一个基类，通过继承可以派生不同类型的ObjectController
  */
 
-#include <memory>
-#include <Object.h>
+#include <QSharedPointer>
+
+class Object;
 
 class ObjectController
 {
@@ -14,8 +15,8 @@ public:
     virtual ~ObjectController() = default;
     virtual void update(double dt) = 0;
 
-    void bindObject(std::shared_ptr<Object> obj) { m_object = obj; }
+    void bindObject(QSharedPointer<Object> &obj) { m_object = obj; }
 
 private:
-    std::shared_ptr<Object> m_object;
+    QSharedPointer<Object> m_object;
 };

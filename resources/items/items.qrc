@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/items">
+        <file>crates_and_barrels.glb</file>
+        <file>brickwall.jpg</file>
+        <file>brickwall_normal.jpg</file>
+        <file>SpaceBlanketFolds/ao.tif</file>
+        <file>SpaceBlanketFolds/baseColor.tif</file>
+        <file>SpaceBlanketFolds/height.tif</file>
+        <file>SpaceBlanketFolds/metallic.tif</file>
+        <file>SpaceBlanketFolds/normal.tif</file>
+        <file>SpaceBlanketFolds/roughness.tif</file>
+    </qresource>
+</RCC>

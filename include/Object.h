@@ -1,5 +1,4 @@
 #pragma once
-#define GLM_ENABLE_EXPERIMENTAL
 
 /* Object渲染对象
  * 是渲染架构中最小的组成单元
@@ -8,15 +7,20 @@
  * draw()方法需要在上一级Scene提供的语境中使用，即需要设置好相机相关的数据
  */
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
+#include <QObject>
+#include <QOpenGLFunctions>
+#include <QVector3D>
+#include <QQuaternion>
+#include <QMatrix4x4>
+#include <QOpenGLBuffer>
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLShaderProgram>
+#include <QString>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <Shader.h>
-#include <memory>
 
+#include <Material.h>
+#include <ObjectController.h>
+#include <ShaderManager.h>
 #include <Mesh.h>
 
 enum class DrawMode
@@ -28,64 +32,91 @@ enum class DrawMode
 
 enum class ObjectType
 {
-    STATIC,     // 静态对象，数据在Object创建时上传到GPU
-    DYNAMIC,    // 动态对象，每一帧重新上传数据到GPU
-    SEMI_STATIC // 半静态对象，顶点位置在创建时上传，颜色数据动态上传
+    STATIC,  // 使用colorBufferData的静态对象
+    FEM,     // FEM对象，展示FEM结果，使用colorBufferData
+    MATERIAL // 使用Material
 };
 
-class Object
+class Object : public QObject, protected QOpenGLFunctions
 {
+    Q_OBJECT
 public:
-    Object();
-    ~Object();
+    Object(QObject *parent = nullptr);
+    virtual ~Object();
 
-    GLuint VAO, VBO, EBO, colorVBO;
-    std::vector<float> vertices;       // 每三个元素表示一个点的坐标
-    std::vector<unsigned int> indices; // 每三个元素表示一个三角形的三个顶点
-    std::vector<float> colorBuffer;
+    friend ObjectController; // 声明为友元，允许对应的controller直接修改内部数据
 
-    std::size_t getVerticesSize() const { return vertices.size(); }
-    std::size_t getIndicesSize() const { return indices.size(); }
+    std::size_t getVerticesSize() const { return m_vertices.size(); }
+    std::size_t getIndicesSize() const { return m_indices.size(); }
 
-    void setPosition(const glm::vec3 &pos);
-    void setRotation(const glm::quat &rot);
-    void setScale(const glm::vec3 &scl);
-    void updateModelMatrix();
-    glm::mat4 getModelMatrix();
+    // 变换设置
+    void setPosition(const QVector3D &pos);
+    void setRotation(const QQuaternion &rot);
+    void setScale(const QVector3D &scl);
+    QMatrix4x4 getModelMatrix();
 
-    void loadFromMesh(const Mesh &mesh);
-    void attachShader(const std::shared_ptr<Shader> &sdr) { shader = sdr; }
-    std::shared_ptr<Shader> getShader() const { return shader; }
+    void setMaterial(const QString &materialName);
+    void setShader(const QString &shaderName);
+    QSharedPointer<QOpenGLShaderProgram> getShader() const { return m_shader; }
+    void setColorBuffer(const std::vector<float> &colorData);
 
     void setDrawMode(DrawMode mode);
     DrawMode getDrawMode() const;
     void setObjectType(ObjectType type);
     ObjectType getObjectType() const;
 
-    void draw(); // 需要在上一级Scene提供的语境中使用
+    // 从网格中加载，适用于FEM，自动计算normal, tangent, bitangents
+    void loadFromMesh(const FEMLib::Mesh &mesh);
+
+    // 从GLB文件中加载
+    // TODO: 一次性加载多个对象，可能需要移动到Scene中，在这里提供相应接口
+    bool loadFromGLB(const QString &filePath);
+
+    void initialize(); // 在添加到Scene后由该scene调用
+    void draw();       // 需要在上一级Scene提供的语境中使用
+
+    void loadCube(); // 加载一个最简单的立方体
 
 private:
-    glm::vec3 position;
-    glm::quat rotation;
-    glm::vec3 scale;
-    glm::mat4 modelMatrix;
-    bool shouldUpdateModelMatrix;
+    QOpenGLVertexArrayObject m_vao;
+    QOpenGLBuffer m_vertexBuffer;    // 顶点坐标    location=0
+    QOpenGLBuffer m_indexBuffer;     // 顶点下标
+    QOpenGLBuffer m_normalBuffer;    // 法向量      location=1
+    QOpenGLBuffer m_tangentBuffer;   // 切向量      location=2
+    QOpenGLBuffer m_biTangentBuffer; // 副切向量    location=3
+    QOpenGLBuffer m_colorBuffer;     // 颜色缓冲    location=4
+    QOpenGLBuffer m_texCoordBuffer;  // uv坐标      location=5
 
-    std::shared_ptr<Shader> shader; // 使用的shader，可与其他对象共享
-    DrawMode drawmode;
-    ObjectType objecttype;
+    std::vector<float> m_vertices;       // 每三个元素表示一个点的坐标
+    std::vector<unsigned int> m_indices; // 每三个元素表示一个三角形的三个顶点
+    std::vector<float> m_normals;
+    std::vector<float> m_tangent;
+    std::vector<float> m_biTangent;
+    std::vector<float> m_texCoord; // uv坐标，每两个数据对应一个顶点
 
+    std::vector<float> m_colorBufferData; // 颜色数据
+    QString m_materialName;
+    QSharedPointer<Material> m_material;  // 材质
+
+    QVector3D m_position;
+    QQuaternion m_rotation;
+    QVector3D m_scale;
+    QMatrix4x4 m_modelMatrix;
+    bool m_shouldUpdateModelMatrix;
+
+    QString m_shaderName;
+    QSharedPointer<QOpenGLShaderProgram> m_shader; // 使用的shader，可与其他对象共享
+    DrawMode m_drawMode;
+    ObjectType m_objectType;
+
+    bool m_initialized = false; // 是否已初始化
 private:
-    void uploadVertex(); // 辅助函数，均需要在绑定VAO之后使用
-    void uploadElement();
-    void uploadColorBuffer();
+    void createBuffers();
     void uploadToBuffer();
-
-    void updateVertex();
-    void updateElement();
-    void updateColorBuffer();
-    void updateBuffer(); // 更新Buffer中的数据
+    void updateBuffer();
 
     void drawWireframe();
     void drawFill();
+
+    void updateModelMatrix();
 };
