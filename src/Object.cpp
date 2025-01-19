@@ -9,6 +9,7 @@
 #include <tiny_gltf.h>
 
 #include "Mesh.h" // 如果需要把 Mesh 解析为顶点索引
+using namespace FEMLib;
 
 Object::Object(QObject *parent)
     : QObject(parent)

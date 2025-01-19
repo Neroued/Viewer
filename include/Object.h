@@ -66,7 +66,7 @@ public:
     ObjectType getObjectType() const;
 
     // 从网格中加载，适用于FEM，自动计算normal, tangent, bitangents
-    void loadFromMesh(const Mesh &mesh);
+    void loadFromMesh(const FEMLib::Mesh &mesh);
 
     // 从GLB文件中加载
     // TODO: 一次性加载多个对象，可能需要移动到Scene中，在这里提供相应接口

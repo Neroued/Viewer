@@ -21,7 +21,7 @@ qt_add_resources(RES_SOURCES ${SHADER_QRC} ${ITEM_QRC})
 
 
 # 添加子目录和头文件路径
-add_subdirectory(lib)
+add_subdirectory(FEMLib)
 include_directories(include/)
 include_directories(extern/tinygltf)
 
@@ -41,7 +41,7 @@ target_link_libraries(Qttest PRIVATE
     Qt6::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
-    Lib
+    FEMLib
     OpenMP::OpenMP_CXX
     OpenGL::GL
 )

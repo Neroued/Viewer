@@ -14,6 +14,8 @@
 #include <atomic>
 #include <random>
 
+using namespace FEMLib;
+
 static double test_f(const Vec3 &pos, double omega_0 = 1.0, double sigma = 1.0)
 {
     using namespace std;
