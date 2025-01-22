@@ -19,9 +19,9 @@ void MVP_P1_Mass(const FEMatrix &M, const Vec &x, Vec &y)
     // 根据三角形依次计算非对角线
     for (size_t t = 0; t < M.m.triangle_count(); ++t)
     {
-        uint32_t a = M.m.indices[3 * t];
-        uint32_t b = M.m.indices[3 * t + 1];
-        uint32_t c = M.m.indices[3 * t + 2];
+        TriangleIndex a = M.m.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = M.m.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = M.m.m_triangleIndices[3 * t + 2];
 
         // 每个三角形仅对应offdiag中的一个元素，但
         double val = M.offdiag[t];
@@ -49,9 +49,9 @@ void MVP_P1_Sniffness(const FEMatrix &M, const Vec &x, Vec &y)
     // 根据三角形依次计算非对角线
     for (size_t t = 0; t < M.m.triangle_count(); ++t)
     {
-        uint32_t a = M.m.indices[3 * t];
-        uint32_t b = M.m.indices[3 * t + 1];
-        uint32_t c = M.m.indices[3 * t + 2];
+        TriangleIndex a = M.m.m_triangleIndices[3 * t];
+        TriangleIndex b = M.m.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = M.m.m_triangleIndices[3 * t + 2];
 
         // 按照AB, AC, BC的顺序存储非对角线元素
         // 因此是a行b列，a行c列，b行c列的顺序
@@ -98,9 +98,9 @@ void FEMatrix::print() const
     // 填充非对角线元素
     for (size_t t = 0; t < m.triangle_count(); ++t)
     {
-        uint32_t a = m.indices[3 * t + 0];
-        uint32_t b = m.indices[3 * t + 1];
-        uint32_t c = m.indices[3 * t + 2];
+        TriangleIndex a = m.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = m.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = m.m_triangleIndices[3 * t + 2];
 
         if (femtype == P1_Mass)
         {

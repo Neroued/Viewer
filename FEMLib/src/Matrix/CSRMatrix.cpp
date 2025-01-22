@@ -12,8 +12,8 @@
 
 NAMESPACE_BEGIN(FEMLib)
 
-CSRMatrix::CSRMatrix(Mesh &m)
-    : Matrix(m.vertex_count(), m.vertex_count()), row_offset(rows + 1, 1)
+CSRMatrix::CSRMatrix(Mesh &mesh)
+    : Matrix(mesh.vertex_count(), mesh.vertex_count()), row_offset(rows + 1, 1)
 {
     /* 统计每个顶点对应的非零元素数量，然后初始化elements, row_offset 和 elm_idx
      * 根据构建网格的特征
@@ -24,11 +24,11 @@ CSRMatrix::CSRMatrix(Mesh &m)
      * row_offset前rows个元素为对应row的开始下标，最后多存储一个元素方便计算每一行的长度
      */
     // 统计每个点的出现次数
-    for (size_t t = 0; t < m.triangle_count(); ++t)
+    for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        row_offset[m.indices[3 * t + 0]] += 1;
-        row_offset[m.indices[3 * t + 1]] += 1;
-        row_offset[m.indices[3 * t + 2]] += 1;
+        row_offset[mesh.m_triangleIndices[3 * t + 0]] += 1;
+        row_offset[mesh.m_triangleIndices[3 * t + 1]] += 1;
+        row_offset[mesh.m_triangleIndices[3 * t + 2]] += 1;
     }
 
     // 将数量转换为偏移量
@@ -51,22 +51,22 @@ CSRMatrix::CSRMatrix(Mesh &m)
     elm_idx.resize(s);
     elm_idx.setAll(-1); // 设置为-1即size_t最大值，便于之后按大小顺序插入元素
 
-    uint32_t a, b, c;
-    for (size_t t = 0; t < m.triangle_count(); ++t)
+    TriangleIndex a, b, c;
+    for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        a = m.indices[3 * t + 0];
-        b = m.indices[3 * t + 1];
-        c = m.indices[3 * t + 2];
+        a = mesh.m_triangleIndices[3 * t + 0];
+        b = mesh.m_triangleIndices[3 * t + 1];
+        c = mesh.m_triangleIndices[3 * t + 2];
 
-        std::vector<uint32_t> triangle = {a, b, c};
+        std::vector<TriangleIndex> triangle = {a, b, c};
         /* 对于当前三角形的每一个顶点，对于当前三角形对应的三个行，
          * 判断是否为第一次出现，并以从小到大的顺序插入
          */
         size_t offset;
         int len;
-        for (uint32_t current_vtx : triangle)
+        for (TriangleIndex current_vtx : triangle)
         {
-            for (uint32_t current_row : triangle)
+            for (TriangleIndex current_row : triangle)
             {
                 // 定位当前行
                 offset = row_offset[current_row];
@@ -128,6 +128,7 @@ void CSRMatrix::MVP(const Vec &x, Vec &y) const
 
 void blas_addMatrix(const CSRMatrix &M, double val, const CSRMatrix &S, CSRMatrix &A)
 // 计算A = val * M + S
+// 仅用于使用同一个mesh初始化的两个矩阵
 {
     for (size_t t = 0; t < A.elements.size; ++t)
     {

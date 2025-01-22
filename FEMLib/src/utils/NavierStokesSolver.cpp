@@ -1,7 +1,6 @@
 #include <NavierStokesSolver.h>
 #include <Mesh.h>
 #include <TArray.h>
-#include <vec3.h>
 #include <NSMatrix.h>
 #include <fem.h>
 #include <systemSolve.h>
@@ -11,7 +10,7 @@
 NAMESPACE_BEGIN(FEMLib)
 
 NavierStokesSolver::NavierStokesSolver(int subdiv, MeshType meshtype)
-    : mesh(subdiv, meshtype, true), M(mesh), S(mesh), A(mesh), Omega(M.rows, 0), MOmega(M.rows, 0), Psi(M.rows, 0), T(M.rows, 0), r(M.rows, 0), p(M.rows, 0), Ap(M.rows, 0),
+    : mesh(subdiv, meshtype), M(mesh), S(mesh), A(mesh), Omega(M.rows, 0), MOmega(M.rows, 0), Psi(M.rows, 0), T(M.rows, 0), r(M.rows, 0), p(M.rows, 0), Ap(M.rows, 0),
       cholesky()
 {
     t = 0;
@@ -62,9 +61,9 @@ void NavierStokesSolver::computeTransport()
 
     for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        uint32_t a = mesh.indices[3 * t + 0];
-        uint32_t b = mesh.indices[3 * t + 1];
-        uint32_t c = mesh.indices[3 * t + 2];
+        TriangleIndex a = mesh.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = mesh.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = mesh.m_triangleIndices[3 * t + 2];
 
         double sum = Omega[a] + Omega[b] + Omega[c];
         T[a] += sum * (Psi[b] - Psi[c]);

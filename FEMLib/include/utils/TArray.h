@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <cmath>
 #include <initializer_list>
+#include <vector>
 
 NAMESPACE_BEGIN(FEMLib)
 
@@ -89,13 +90,16 @@ public:
     const T *begin() const { return data; }
     const T *end() const { return data + size; }
 
+    // 转化为std::vector
+    std::vector<T> to_stdVector() const;
+
     // TArray中的成员
     size_t size;     // 当前array的元素个数
     size_t capacity; // 当前分配的容量
     T *data;         // 存储的T数组
 };
 
-typedef TArray<double> Vec;
+using Vec = TArray<double>;
 
 // 构造函数
 template <typename T>
@@ -613,6 +617,12 @@ T TArray<T>::sum()
         s += data[i];
     }
     return s;
+}
+
+template <typename T>
+std::vector<T> TArray<T>::to_stdVector() const
+{
+    return std::vector<T>(begin(), end());
 }
 
 NAMESPACE_END

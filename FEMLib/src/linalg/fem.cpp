@@ -11,8 +11,37 @@
 
 NAMESPACE_BEGIN(FEMLib)
 
-static void massLoc(const Vec3 &AB, const Vec3 &AC, double *Mloc);  // 根据输入两个向量代表的三角形计算局部质量矩阵
-static void stiffLoc(const Vec3 &AB, const Vec3 &AC, double *Sloc); // 同上，计算刚度矩阵
+static void getVector(const VertexCoord *A, const VertexCoord *B, VertexCoord *AB) // 计算向量AB
+{
+    AB[0] = B[0] - A[0];
+    AB[1] = B[1] - A[1];
+    AB[2] = B[2] - A[2];
+}
+
+static double norm(const VertexCoord *AB)
+{
+    return std::sqrt((double)AB[0] * AB[0] + (double)AB[1] * AB[1] + (double)AB[2] * AB[2]);
+}
+
+static double norm2(const VertexCoord *AB)
+{
+    return (double)AB[0] * AB[0] + (double)AB[1] * AB[1] + (double)AB[2] * AB[2];
+}
+
+static double dot(const VertexCoord *AB, const VertexCoord *AC)
+{
+    return AB[0] * AC[0] + AB[1] * AC[1] + AB[2] * AC[2];
+}
+
+static void cross(const VertexCoord *AB, const VertexCoord *AC, VertexCoord *ans)
+{
+    ans[0] = AB[1] * AC[2] - AB[2] * AC[1];
+    ans[1] = AB[2] * AC[0] - AB[0] * AC[2];
+    ans[2] = AB[0] * AC[1] - AB[1] * AC[0];
+}
+
+static void massLoc(const VertexCoord *AB, const VertexCoord *AC, double *Mloc);  // 根据输入两个向量代表的三角形计算局部质量矩阵
+static void stiffLoc(const VertexCoord *AB, const VertexCoord *AC, double *Sloc); // 同上，计算刚度矩阵
 
 void buildMassMatrix(FEMatrix &M)
 /* 根据网格建立质量矩阵
@@ -24,19 +53,21 @@ void buildMassMatrix(FEMatrix &M)
  */
 {
     Mesh &mesh = M.m;
+    VertexCoord *AB = new VertexCoord[3];
+    VertexCoord *AC = new VertexCoord[3];
     // 根据每个三角形进行计算
     for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        uint32_t a = mesh.indices[3 * t + 0];
-        uint32_t b = mesh.indices[3 * t + 1];
-        uint32_t c = mesh.indices[3 * t + 2];
+        TriangleIndex a = mesh.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = mesh.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = mesh.m_triangleIndices[3 * t + 2];
 
-        Vec3 A = mesh.vertices[a];
-        Vec3 B = mesh.vertices[b];
-        Vec3 C = mesh.vertices[c];
+        const VertexCoord *A = mesh.vertex(a);
+        const VertexCoord *B = mesh.vertex(b);
+        const VertexCoord *C = mesh.vertex(c);
 
-        Vec3 AB = B - A;
-        Vec3 AC = C - A;
+        getVector(A, B, AB);
+        getVector(A, C, AC);
 
         // 局部质量矩阵，9个元素，其中只有2个不同的值, 第一个值为对角线元素，第二个值为非对角线元素
         double Mloc[2];
@@ -48,14 +79,18 @@ void buildMassMatrix(FEMatrix &M)
 
         M.offdiag[t] = Mloc[1];
     }
+    delete[] AB;
+    delete[] AC;
 }
 
-static void massLoc(const Vec3 &AB, const Vec3 &AC, double *Mloc)
+static void massLoc(const VertexCoord *AB, const VertexCoord *AC, double *Mloc)
 /* 根据输入的向量AB和AC计算局部质量矩阵
  * 首先计算三角形面积，公式为 |ABC| = 0.5 * |AB x AC|
  */
 {
-    double S_ABC = 0.5 * norm(cross(AB, AC));
+    VertexCoord *ans = new VertexCoord[3];
+    cross(AB, AC, ans);
+    double S_ABC = 0.5 * norm(ans);
     Mloc[0] = S_ABC / 6.0;
     Mloc[1] = S_ABC / 12.0;
 }
@@ -67,18 +102,20 @@ void buildStiffnessMatrix(FEMatrix &S)
  */
 {
     Mesh &mesh = S.m;
+    VertexCoord *AB = new VertexCoord[3];
+    VertexCoord *AC = new VertexCoord[3];
     for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        uint32_t a = mesh.indices[3 * t + 0];
-        uint32_t b = mesh.indices[3 * t + 1];
-        uint32_t c = mesh.indices[3 * t + 2];
+        TriangleIndex a = mesh.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = mesh.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = mesh.m_triangleIndices[3 * t + 2];
 
-        Vec3 A = mesh.vertices[a];
-        Vec3 B = mesh.vertices[b];
-        Vec3 C = mesh.vertices[c];
+        const VertexCoord *A = mesh.vertex(a);
+        const VertexCoord *B = mesh.vertex(b);
+        const VertexCoord *C = mesh.vertex(c);
 
-        Vec3 AB = B - A;
-        Vec3 AC = C - A;
+        getVector(A, B, AB);
+        getVector(A, C, AC);
 
         // 局部刚度矩阵，9个元素，其中有6个不同的值, 前三个依次为对角线元素，后三个依次为S_AB, S_AC, S_BC
         double Sloc[6];
@@ -92,9 +129,11 @@ void buildStiffnessMatrix(FEMatrix &S)
         S.offdiag[3 * t + 1] = Sloc[4];
         S.offdiag[3 * t + 2] = Sloc[5];
     }
+    delete[] AB;
+    delete[] AC;
 }
 
-static void stiffLoc(const Vec3 &AB, const Vec3 &AC, double *Sloc)
+static void stiffLoc(const VertexCoord *AB, const VertexCoord *AC, double *Sloc)
 /* 计算局部刚度矩阵
  * BC = AC - AB
  * 存储顺序是S_AB, S_AC, S_BC
@@ -179,21 +218,24 @@ void process_mass_matrix_row(CSRMatrix &M, uint32_t current_row, int i,
 
 void buildMassMatrix(CSRMatrix &M, Mesh &mesh)
 {
+
 #pragma omp parallel for
     for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        uint32_t a = mesh.indices[3 * t + 0];
-        uint32_t b = mesh.indices[3 * t + 1];
-        uint32_t c = mesh.indices[3 * t + 2];
+        VertexCoord *AB = new VertexCoord[3];
+        VertexCoord *AC = new VertexCoord[3];
+        TriangleIndex a = mesh.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = mesh.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = mesh.m_triangleIndices[3 * t + 2];
 
-        Vec3 A = mesh.vertices[a];
-        Vec3 B = mesh.vertices[b];
-        Vec3 C = mesh.vertices[c];
+        const VertexCoord *A = mesh.vertex(a);
+        const VertexCoord *B = mesh.vertex(b);
+        const VertexCoord *C = mesh.vertex(c);
 
-        Vec3 AB = B - A;
-        Vec3 AC = C - A;
+        getVector(A, B, AB);
+        getVector(A, C, AC);
 
-        // 计算局部质量矩阵，2个唯一的元素
+        // 局部质量矩阵，9个元素，其中只有2个不同的值, 第一个值为对角线元素，第二个值为非对角线元素
         double Mloc[2];
         massLoc(AB, AC, Mloc);
 
@@ -208,6 +250,8 @@ void buildMassMatrix(CSRMatrix &M, Mesh &mesh)
             uint32_t current_row = triangle[i];
             process_mass_matrix_row(M, current_row, i, vertex_to_local_index, Mloc);
         }
+        delete[] AB;
+        delete[] AC;
     }
 }
 
@@ -258,18 +302,20 @@ void buildStiffnessMatrix(CSRMatrix &S, Mesh &mesh)
 #pragma omp parallel for
     for (size_t t = 0; t < mesh.triangle_count(); ++t)
     {
-        uint32_t a = mesh.indices[3 * t + 0];
-        uint32_t b = mesh.indices[3 * t + 1];
-        uint32_t c = mesh.indices[3 * t + 2];
+        VertexCoord *AB = new VertexCoord[3];
+        VertexCoord *AC = new VertexCoord[3];
+        TriangleIndex a = mesh.m_triangleIndices[3 * t + 0];
+        TriangleIndex b = mesh.m_triangleIndices[3 * t + 1];
+        TriangleIndex c = mesh.m_triangleIndices[3 * t + 2];
 
-        Vec3 A = mesh.vertices[a];
-        Vec3 B = mesh.vertices[b];
-        Vec3 C = mesh.vertices[c];
+        const VertexCoord *A = mesh.vertex(a);
+        const VertexCoord *B = mesh.vertex(b);
+        const VertexCoord *C = mesh.vertex(c);
 
-        Vec3 AB = B - A;
-        Vec3 AC = C - A;
+        getVector(A, B, AB);
+        getVector(A, C, AC);
 
-        // 计算局部刚度矩阵，6个唯一的元素
+        // 局部刚度矩阵，9个元素，其中有6个不同的值, 前三个依次为对角线元素，后三个依次为S_AB, S_AC, S_BC
         double Sloc[6];
         stiffLoc(AB, AC, Sloc);
 
@@ -284,6 +330,8 @@ void buildStiffnessMatrix(CSRMatrix &S, Mesh &mesh)
             uint32_t current_row = triangle[i];
             process_matrix_row(S, current_row, i, triangle, vertex_to_local_index, Sloc);
         }
+        delete[] AB;
+        delete[] AC;
     }
 }
 

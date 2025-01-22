@@ -12,12 +12,7 @@
 using namespace FEMLib;
 
 Object::Object(QObject *parent)
-    : QObject(parent)
-    , m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f)
-    , m_shouldUpdateModelMatrix(true)
-    , m_shaderName("basic"), m_shader(nullptr)
-    , m_drawMode(DrawMode::FILL), m_objectType(ObjectType::STATIC)
-    , m_materialName("default"), m_material(nullptr)
+    : QObject(parent), m_position(0.0f, 0.0f, 0.0f), m_rotation(), m_scale(1.0f, 1.0f, 1.0f), m_shouldUpdateModelMatrix(true), m_shaderName("basic"), m_shader(nullptr), m_drawMode(DrawMode::FILL), m_objectType(ObjectType::STATIC), m_materialName("default"), m_material(nullptr)
 {
 }
 
@@ -121,30 +116,17 @@ void normalize(std::vector<float> &vec)
 
 void Object::loadFromMesh(const Mesh &mesh)
 {
-    m_vertices.resize(mesh.vertices.size * 3);
-    m_indices.resize(mesh.indices.size);
-    m_normals.resize(mesh.vertices.size * 3, 0.0f);
-
-    std::size_t k = 0;
-    for (std::size_t i = 0; i < mesh.vertices.size; ++i)
-    {
-        m_vertices[k++] = (float)mesh.vertices[i].x;
-        m_vertices[k++] = (float)mesh.vertices[i].y;
-        m_vertices[k++] = (float)mesh.vertices[i].z;
-    }
-
-    for (std::size_t i = 0; i < mesh.indices.size; ++i)
-    {
-        m_indices[i] = mesh.indices[i];
-    }
+    m_vertices = mesh.m_vertices.to_stdVector();
+    m_indices = mesh.m_triangleIndices.to_stdVector();
+    m_normals.resize(mesh.m_vertices.size, 0.0f);
 
     // Step 3: Compute face normals and accumulate to vertex normals
-    for (std::size_t i = 0; i < mesh.indices.size; i += 3)
+    for (std::size_t i = 0; i < mesh.m_triangleIndices.size; i += 3)
     {
         // Get triangle vertex indices
-        std::size_t idx0 = mesh.indices[i];
-        std::size_t idx1 = mesh.indices[i + 1];
-        std::size_t idx2 = mesh.indices[i + 2];
+        std::size_t idx0 = mesh.m_triangleIndices[i];
+        std::size_t idx1 = mesh.m_triangleIndices[i + 1];
+        std::size_t idx2 = mesh.m_triangleIndices[i + 2];
 
         // Get triangle vertices
         float v0[3] = {m_vertices[idx0 * 3], m_vertices[idx0 * 3 + 1], m_vertices[idx0 * 3 + 2]};
@@ -171,7 +153,7 @@ void Object::loadFromMesh(const Mesh &mesh)
     }
 
     // Step 4: Normalize all vertex normals
-    for (std::size_t i = 0; i < mesh.vertices.size; ++i)
+    for (std::size_t i = 0; i < mesh.m_vertices.size / 3; ++i)
     {
         std::vector<float> normal = {
             m_normals[i * 3],
@@ -597,18 +579,20 @@ void Object::loadCube()
         // 由于面在 +X 侧，因此 x=+0.5 固定；y、z 在 [-0.5, 0.5] 内。
         // UV 的分配让左下 -> uv(0,0), 左上 -> uv(0,1), 右上 -> uv(1,1), 右下 -> uv(1,0)
         // （当然，你也可以按其他方式给四顶点分配 UV，只要保证纹理映射一致就行）
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceXPos[4] = {
-            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D( 0.5f,  0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
-            { QVector3D( 0.5f,  0.5f,  0.5f), QVector2D(1.0f, 1.0f) }, // right-top
-            { QVector3D( 0.5f, -0.5f,  0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+            {QVector3D(0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f)}, // left-bottom
+            {QVector3D(0.5f, 0.5f, -0.5f), QVector2D(0.0f, 1.0f)},  // left-top
+            {QVector3D(0.5f, 0.5f, 0.5f), QVector2D(1.0f, 1.0f)},   // right-top
+            {QVector3D(0.5f, -0.5f, 0.5f), QVector2D(1.0f, 0.0f)}   // right-bottom
         };
 
         // 将数据写入 m_vertices, m_normals, m_tangent, m_biTangent, m_texCoord
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceXPos[i].pos.x());
             m_vertices.push_back(faceXPos[i].pos.y());
             m_vertices.push_back(faceXPos[i].pos.z());
@@ -637,17 +621,19 @@ void Object::loadCube()
         // normal x tangent = bitangent
         QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,-1)
 
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceXNeg[4] = {
-            { QVector3D(-0.5f, -0.5f,  0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D(-0.5f,  0.5f,  0.5f), QVector2D(0.0f, 1.0f) }, // left-top
-            { QVector3D(-0.5f,  0.5f, -0.5f), QVector2D(1.0f, 1.0f) }, // right-top
-            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+            {QVector3D(-0.5f, -0.5f, 0.5f), QVector2D(0.0f, 0.0f)}, // left-bottom
+            {QVector3D(-0.5f, 0.5f, 0.5f), QVector2D(0.0f, 1.0f)},  // left-top
+            {QVector3D(-0.5f, 0.5f, -0.5f), QVector2D(1.0f, 1.0f)}, // right-top
+            {QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f)} // right-bottom
         };
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceXNeg[i].pos.x());
             m_vertices.push_back(faceXNeg[i].pos.y());
             m_vertices.push_back(faceXNeg[i].pos.z());
@@ -675,17 +661,19 @@ void Object::loadCube()
         QVector3D tangent(1.0f, 0.0f, 0.0f);
         QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,1)
 
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceYPos[4] = {
-            { QVector3D(-0.5f, 0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D(-0.5f, 0.5f,  0.5f), QVector2D(0.0f, 1.0f) }, // left-top
-            { QVector3D( 0.5f, 0.5f,  0.5f), QVector2D(1.0f, 1.0f) }, // right-top
-            { QVector3D( 0.5f, 0.5f, -0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+            {QVector3D(-0.5f, 0.5f, -0.5f), QVector2D(0.0f, 0.0f)}, // left-bottom
+            {QVector3D(-0.5f, 0.5f, 0.5f), QVector2D(0.0f, 1.0f)},  // left-top
+            {QVector3D(0.5f, 0.5f, 0.5f), QVector2D(1.0f, 1.0f)},   // right-top
+            {QVector3D(0.5f, 0.5f, -0.5f), QVector2D(1.0f, 0.0f)}   // right-bottom
         };
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceYPos[i].pos.x());
             m_vertices.push_back(faceYPos[i].pos.y());
             m_vertices.push_back(faceYPos[i].pos.z());
@@ -713,17 +701,19 @@ void Object::loadCube()
         QVector3D tangent(1.0f, 0.0f, 0.0f);
         QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,0,-1)
 
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceYNeg[4] = {
-            { QVector3D(-0.5f, -0.5f,  0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
-            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(1.0f, 1.0f) }, // right-top
-            { QVector3D( 0.5f, -0.5f,  0.5f), QVector2D(1.0f, 0.0f) }  // right-bottom
+            {QVector3D(-0.5f, -0.5f, 0.5f), QVector2D(0.0f, 0.0f)},  // left-bottom
+            {QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 1.0f)}, // left-top
+            {QVector3D(0.5f, -0.5f, -0.5f), QVector2D(1.0f, 1.0f)},  // right-top
+            {QVector3D(0.5f, -0.5f, 0.5f), QVector2D(1.0f, 0.0f)}    // right-bottom
         };
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceYNeg[i].pos.x());
             m_vertices.push_back(faceYNeg[i].pos.y());
             m_vertices.push_back(faceYNeg[i].pos.z());
@@ -751,17 +741,19 @@ void Object::loadCube()
         QVector3D tangent(1.0f, 0.0f, 0.0f);
         QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,1,0)
 
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceZPos[4] = {
-            { QVector3D(-0.5f, -0.5f, 0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D( 0.5f, -0.5f, 0.5f), QVector2D(1.0f, 0.0f) }, // right-bottom
-            { QVector3D( 0.5f,  0.5f, 0.5f), QVector2D(1.0f, 1.0f) }, // right-top
-            { QVector3D(-0.5f,  0.5f, 0.5f), QVector2D(0.0f, 1.0f) }  // left-top
+            {QVector3D(-0.5f, -0.5f, 0.5f), QVector2D(0.0f, 0.0f)}, // left-bottom
+            {QVector3D(0.5f, -0.5f, 0.5f), QVector2D(1.0f, 0.0f)},  // right-bottom
+            {QVector3D(0.5f, 0.5f, 0.5f), QVector2D(1.0f, 1.0f)},   // right-top
+            {QVector3D(-0.5f, 0.5f, 0.5f), QVector2D(0.0f, 1.0f)}   // left-top
         };
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceZPos[i].pos.x());
             m_vertices.push_back(faceZPos[i].pos.y());
             m_vertices.push_back(faceZPos[i].pos.z());
@@ -789,17 +781,19 @@ void Object::loadCube()
         QVector3D tangent(1.0f, 0.0f, 0.0f);
         QVector3D bitangent = QVector3D::crossProduct(normal, tangent); // = (0,-1,0)
 
-        struct VertexData {
+        struct VertexData
+        {
             QVector3D pos;
             QVector2D uv;
         } faceZNeg[4] = {
-            { QVector3D( 0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f) }, // right-bottom
-            { QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f) }, // left-bottom
-            { QVector3D(-0.5f,  0.5f, -0.5f), QVector2D(0.0f, 1.0f) }, // left-top
-            { QVector3D( 0.5f,  0.5f, -0.5f), QVector2D(1.0f, 1.0f) }  // right-top
+            {QVector3D(0.5f, -0.5f, -0.5f), QVector2D(1.0f, 0.0f)},  // right-bottom
+            {QVector3D(-0.5f, -0.5f, -0.5f), QVector2D(0.0f, 0.0f)}, // left-bottom
+            {QVector3D(-0.5f, 0.5f, -0.5f), QVector2D(0.0f, 1.0f)},  // left-top
+            {QVector3D(0.5f, 0.5f, -0.5f), QVector2D(1.0f, 1.0f)}    // right-top
         };
 
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i)
+        {
             m_vertices.push_back(faceZNeg[i].pos.x());
             m_vertices.push_back(faceZNeg[i].pos.y());
             m_vertices.push_back(faceZNeg[i].pos.z());
@@ -839,4 +833,3 @@ void Object::loadCube()
         m_indices.push_back(offset + 3);
     }
 }
-

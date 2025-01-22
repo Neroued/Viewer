@@ -10,14 +10,14 @@
 
 NAMESPACE_BEGIN(FEMLib)
 
-FEMData::FEMData(int subdiv, MeshType meshtype, double (*func)(Vec3 pos))
+FEMData::FEMData(int subdiv, MeshType meshtype, double (*func)(VertexCoord *pos))
     : mesh(subdiv, meshtype), A(mesh), u(mesh.vertex_count(), 0.0), B(mesh.vertex_count())
 {
     Timer t;
     Vec b(mesh.vertex_count());
     for (size_t i = 0; i < mesh.vertex_count(); ++i)
     {
-        b[i] = func(mesh.vertices[i]);
+        b[i] = func(mesh.vertex(i));
     }
 
     t.start();

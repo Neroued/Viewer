@@ -16,7 +16,7 @@
 
 using namespace FEMLib;
 
-static double test_f(const Vec3 &pos, double omega_0 = 1.0, double sigma = 1.0)
+static double test_f(const VertexCoord *pos, double omega_0 = 1.0, double sigma = 1.0)
 {
     using namespace std;
 
@@ -60,7 +60,7 @@ public:
 
         for (size_t i = 0; i < m_solver.Omega.size; ++i)
         {
-            m_solver.Omega[i] = test_f(m_solver.mesh.vertices[i], 0.5, 1.5);
+            m_solver.Omega[i] = test_f(m_solver.mesh.vertex(i), 0.5, 1.5);
         }
 
         m_obj->setObjectType(ObjectType::FEM);
@@ -71,7 +71,7 @@ public:
         m_obj->setDrawMode(DrawMode::FILL);
 
         // 启动计算线程
-        // computeThread = std::thread(&NSController::computeLoop, this);
+        computeThread = std::thread(&NSController::computeLoop, this);
     }
 
     ~NSController()
@@ -86,10 +86,10 @@ public:
 
     void update(double dt)
     {
-        return;
+        // return;
         // 渲染线程中调用：将前缓冲区的数据加载到渲染对象
-        // std::unique_lock<std::mutex> lock(dataMutex);
-        // m_obj->setColorBuffer(colorBufferFront);
+        std::unique_lock<std::mutex> lock(dataMutex);
+        m_obj->setColorBuffer(colorBufferFront);
     }
 
 private:
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     auto scene = QSharedPointer<Scene>::create();
     std::cout << "created scene" << std::endl;
 
-    Mesh mesh(10, SPHERE);
+    Mesh mesh(10, MeshType::SPHERE);
 
     // 创建两个网格对象
     auto obj = QSharedPointer<Object>::create();
@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
     std::uniform_real_distribution<float> scaleDis(0.1f, 0.3f);     // 随机缩放
     std::uniform_real_distribution<float> colorDis(0.0f, 1.0f);     // 随机颜色
 
-    Mesh mesh_alot(15, SPHERE);
+    Mesh mesh_alot(15, MeshType::SPHERE);
     int n = 10;
     for (int k = 0; k < n; ++k)
     {
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
     auto obj5 = QSharedPointer<Object>::create();
     obj5->setPosition(QVector3D(4.0f, 0.0f, 0.0f));
     obj5->setShader("blinn_phong");
-    QSharedPointer<NSController> nsController3 = QSharedPointer<NSController>::create(50, SPHERE, obj5);
+    QSharedPointer<NSController> nsController3 = QSharedPointer<NSController>::create(50, MeshType::SPHERE, obj5);
     scene->addObject(obj5);
     scene->addController(nsController3);
 
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
     obj6->setDrawMode(DrawMode::FILL);
     obj6->setPosition(QVector3D(2.0f, 0.0f, 0.0f));
     obj6->setColorBuffer(nsController3->colorBufferFront);
-    Mesh m(50, SPHERE);
+    Mesh m(50, MeshType::SPHERE);
     obj6->loadFromMesh(m);
     obj6->setShader("basic");
     scene->addObject(obj6);

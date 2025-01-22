@@ -4,7 +4,6 @@
 #include <TArray.h>
 #include <NSMatrix.h>
 #include <Mesh.h>
-#include <vec3.h>
 
 NAMESPACE_BEGIN(FEMLib)
 
@@ -17,7 +16,7 @@ public:
     Vec u;
     Vec B;
 
-    FEMData(int subdiv, MeshType meshtype, double (*func)(Vec3 pos));
+    FEMData(int subdiv, MeshType meshtype, double (*func)(VertexCoord *pos));
 };
 
 NAMESPACE_END
