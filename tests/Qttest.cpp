@@ -24,8 +24,9 @@ static double test_f(const VertexCoord *pos, double omega_0 = 1.0, double sigma 
     double y = pos[1];
     double z = pos[2];
 
-    double r_squared = z * z;
-    double theta = std::atan2(std::sqrt(x * x + y * y), z);
+    double r_squared = x * x + y * y;
+    // double theta = std::atan2(std::sqrt(x * x + y * y), z);
+    double theta = std::atan2(y, x);
     double omega;
 
     // omega = 100 * z * std::exp(-50 * z * z) * (1 + 0.5 * cos(20 * theta));
@@ -33,7 +34,8 @@ static double test_f(const VertexCoord *pos, double omega_0 = 1.0, double sigma 
     // 基于二维高斯分布生成涡量
     // omega = omega_0 * std::exp(-r_squared / (2.0 * sigma * sigma)) * (1.0 + 0.5 * std::cos(10.0 * theta) * z);
 
-    omega = 100 * z * std::exp(-50 * r_squared) * (1.0 + 0.5 * std::cos(20 * theta));
+    // omega = 100 * z * std::exp(-50 * r_squared) * (1.0 + 0.5 * std::cos(20 * theta));
+    omega = std::exp(-r_squared / (2.0 * sigma * sigma)) * std::sin(4 * theta);
     return omega;
 }
 
@@ -184,7 +186,7 @@ int main(int argc, char *argv[])
     auto scene = QSharedPointer<Scene>::create();
     std::cout << "created scene" << std::endl;
 
-    Mesh mesh(10, MeshType::SPHERE);
+    Mesh mesh(2, MeshType::SPHERE);
 
     // 创建两个网格对象
     auto obj = QSharedPointer<Object>::create();
@@ -314,8 +316,45 @@ int main(int argc, char *argv[])
     obj9->setMaterial("SpaceBlanketFolds");
     scene->addObject(obj9);
 
+    // 测试load_square
+    Mesh square(10, MeshType::SQUARE);
+    auto obj10 = QSharedPointer<Object>(new Object);
+    obj10->loadFromMesh(square);
+    obj10->setPosition(QVector3D(-2.1f, 0.0f, 0.0f));
+    obj10->setShader("basic");
+    obj10->setDrawMode(DrawMode::WIREFRAME);
+    obj10->setObjectType(ObjectType::STATIC);
+    scene->addObject(obj10);
+
+    auto obj11 = QSharedPointer<Object>(new Object);
+    obj11->setPosition(QVector3D(-4.2f, 0.0f, 0.0f));
+    obj11->setShader("blinn_phong");
+    QSharedPointer<NSController> nsController4 = QSharedPointer<NSController>::create(50, MeshType::SQUARE, obj11);
+    scene->addObject(obj11);
+    scene->addController(nsController4);
+
+    // 测试load_hemisphere
+    Mesh hemi(5, MeshType::HEMI_SPHERE);
+    std::cout << "hemi!" << std::endl;
+    // std::cout << hemi.m_vertices << std::endl;
+    // std::cout << hemi.m_triangleIndices << std::endl;
+    // std::cout << hemi.m_boundaryIndices << std::endl;
+    auto obj12 = QSharedPointer<Object>(new Object);
+    obj12->loadFromMesh(hemi);
+    obj12->setPosition(QVector3D(-2.1f, 2.1f, 0.0f));
+    obj12->setShader("basic");
+    obj12->setDrawMode(DrawMode::WIREFRAME);
+    obj12->setObjectType(ObjectType::STATIC);
+    scene->addObject(obj12);
+
+    auto obj13 = QSharedPointer<Object>(new Object);
+    obj13->setPosition(QVector3D(-4.2f, 2.1f, 0.0f));
+    obj13->setShader("blinn_phong");
+    QSharedPointer<NSController> nsController5 = QSharedPointer<NSController>::create(50, MeshType::HEMI_SPHERE, obj13);
+    scene->addObject(obj13);
+    scene->addController(nsController5);
+
     gl->addScene(scene);
     gl->initializeScenes();
-
     return app.exec(); // 启动应用程序事件循环
 }

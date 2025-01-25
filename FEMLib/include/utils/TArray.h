@@ -79,6 +79,7 @@ public:
     T *erase(T *first, T *last); // 删除指定范围的元素
     void setAll(const T &value); // 将全部元素设置为value
     T sum();
+    void clear();
 
     // 有关线性代数的方法
     T norm() const;
@@ -623,6 +624,18 @@ template <typename T>
 std::vector<T> TArray<T>::to_stdVector() const
 {
     return std::vector<T>(begin(), end());
+}
+
+template <typename T>
+void TArray<T>::clear()
+{
+    if (data)
+    {
+        delete[] data;
+        data = nullptr;
+    }
+    size = 0;
+    capacity = 0;
 }
 
 NAMESPACE_END
