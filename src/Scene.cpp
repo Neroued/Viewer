@@ -61,9 +61,9 @@ void Scene::draw()
         // 光源位置、颜色、参数
         QVector3D lightPos(10.0f, 10.0f, 10.0f);
         QVector3D lightColor(1.0f, 1.0f, 1.0f);
-        float ambientStrength = 0.2f;
-        float specularStrength = 0.5f;
-        float shininess = 32.0f;
+        float ambientStrength = 0.3f;
+        float specularStrength = 0.1f;
+        float shininess = 8.0f;
 
         shader->setUniformValue("uLightPos", lightPos);
         shader->setUniformValue("uLightColor", lightColor);
