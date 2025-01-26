@@ -336,9 +336,6 @@ int main(int argc, char *argv[])
     // 测试load_hemisphere
     Mesh hemi(5, MeshType::HEMI_SPHERE);
     std::cout << "hemi!" << std::endl;
-    // std::cout << hemi.m_vertices << std::endl;
-    // std::cout << hemi.m_triangleIndices << std::endl;
-    // std::cout << hemi.m_boundaryIndices << std::endl;
     auto obj12 = QSharedPointer<Object>(new Object);
     obj12->loadFromMesh(hemi);
     obj12->setPosition(QVector3D(-2.1f, 2.1f, 0.0f));
