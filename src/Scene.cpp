@@ -94,6 +94,30 @@ void Scene::updateObjects(double dt)
     }
 }
 
+void Scene::startAllController()
+{
+    for (auto &ctrl : m_controllers)
+    {
+        ctrl->start();
+    }
+}
+
+void Scene::stopAllController()
+{
+    for (auto &ctrl : m_controllers)
+    {
+        ctrl->stop();
+    }
+}
+
+void Scene::resetAllController()
+{
+    for (auto &ctrl : m_controllers)
+    {
+        ctrl->reset();
+    }
+}
+
 // TODO: 重构绘制背景的部分，创建专门的类或继承Object
 void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &groundColor)
 {

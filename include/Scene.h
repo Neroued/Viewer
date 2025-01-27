@@ -43,6 +43,11 @@ public:
     // 更新对象 (控制器)
     void updateObjects(double dt);
 
+    // 启动与停止全部控制器
+    void startAllController();
+    void stopAllController();
+    void resetAllController();
+
     // 获取相机
     Camera &getCamera() { return m_camera; }
 

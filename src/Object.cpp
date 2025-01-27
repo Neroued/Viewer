@@ -329,6 +329,7 @@ ObjectType Object::getObjectType() const
 void Object::setColorBuffer(const std::vector<float> &colorData)
 {
     m_colorBufferData = colorData;
+    m_shouldUpdateColorBuffer = true;
 }
 
 static void fillData(std::vector<float> &data, std::size_t targetSize, std::vector<float> defaultValue)
@@ -428,6 +429,7 @@ void Object::uploadToBuffer()
         m_colorBuffer.allocate(m_colorBufferData.data(), int(m_colorBufferData.size() * sizeof(float)));
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
         glEnableVertexAttribArray(4);
+        m_shouldUpdateColorBuffer = false;
     }
 
     // 若为MATERIAL类型，上传TexCoord
@@ -447,18 +449,17 @@ void Object::uploadToBuffer()
 
 void Object::updateBuffer()
 {
-    // 在对应Buffer上使用glBufferSubData之类更新
-    // 在QOpenGLBuffer里对应是 write() 或 allocate() 一部分
     // 根据 m_objectType 判断更新逻辑
     m_vao.bind();
 
     if (m_objectType == ObjectType::FEM)
     {
         // 仅更新 color
-        if (m_colorBuffer.isCreated() && !m_colorBufferData.empty())
+        if (m_shouldUpdateColorBuffer &&  m_colorBuffer.isCreated() && !m_colorBufferData.empty())
         {
             m_colorBuffer.bind();
             m_colorBuffer.write(0, m_colorBufferData.data(), qint64(m_colorBufferData.size() * sizeof(float)));
+            m_shouldUpdateColorBuffer = false;
         }
     }
     // STATIC 不更新

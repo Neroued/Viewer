@@ -14,9 +14,7 @@ class ObjectController
 public:
     virtual ~ObjectController() = default;
     virtual void update(double dt) = 0;
-
-    void bindObject(QSharedPointer<Object> &obj) { m_object = obj; }
-
-private:
-    QSharedPointer<Object> m_object;
+    virtual void start() = 0;
+    virtual void stop() = 0;
+    virtual void reset() = 0;
 };

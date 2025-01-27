@@ -32,9 +32,10 @@ void MainWindow::initLayout()
     // 设置主窗口的中央部件
     setCentralWidget(m_splitter);
 
-    connect(m_openGLWidget, &OpenGLWidget::fpsUpdated, m_leftPanel, &LeftPanel::onFPSUpdated);
+    connect(m_openGLWidget, &OpenGLWidget::fpsUpdated, m_leftPanel, &LeftPanel::onFPSUpdated);          // 更新fps
+    connect(m_openGLWidget, &OpenGLWidget::vertexAndFaceInfoUpdated, m_leftPanel, &LeftPanel::setInfo); // 更新面数与顶点数
 
-    connect(m_openGLWidget, &OpenGLWidget::vertexAndFaceInfoUpdated, m_leftPanel, &LeftPanel::setInfo);
+    connect(m_leftPanel, &LeftPanel::startControllers, m_openGLWidget, &OpenGLWidget::startCurrentSceneAllControllers);
+    connect(m_leftPanel, &LeftPanel::stopControllers, m_openGLWidget, &OpenGLWidget::stopCurrentSceneAllControllers);
+    connect(m_leftPanel, &LeftPanel::resetControllers, m_openGLWidget, &OpenGLWidget::resetCurrentSceneAllControllers);
 }
-
-

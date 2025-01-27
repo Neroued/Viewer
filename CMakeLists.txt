@@ -28,8 +28,8 @@ qt_standard_project_setup()
 
 
 # 源文件列表
-file(GLOB SOURCES src/*.cpp MatrixVisualizer/MatrixVisualizer.cpp)
-file(GLOB HEADERS include/*.h MatrixVisualizer/MatrixVisualizer.h)
+file(GLOB SOURCES src/*.cpp Project/MatrixVisualizer.cpp Project/NSController.cpp)
+file(GLOB HEADERS include/*.h Project/MatrixVisualizer.h Project/NSController.h)
 set(UI_FILE include/LeftPanel.ui)
 set(SHADER_QRC resources/shaders/shaders.qrc)
 set(ITEM_QRC resources/items/items.qrc)
@@ -41,7 +41,7 @@ qt_add_resources(RES_SOURCES ${SHADER_QRC} ${ITEM_QRC})
 add_subdirectory(FEMLib)
 include_directories(include/)
 include_directories(extern/tinygltf)
-include_directories(MatrixVisualizer/)
+include_directories(Project/)
 
 
 # 需要头文件路径，用来添加Q_OBJECT宏

@@ -95,6 +95,7 @@ private:
     std::vector<float> m_texCoord; // uv坐标，每两个数据对应一个顶点
 
     std::vector<float> m_colorBufferData; // 颜色数据
+    bool m_shouldUpdateColorBuffer = true;  // 是否需要更新颜色
     QString m_materialName;
     QSharedPointer<Material> m_material;  // 材质
 

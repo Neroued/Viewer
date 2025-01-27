@@ -28,8 +28,12 @@ public:
 
 signals:
     void fpsUpdated(float fps);
-
     void vertexAndFaceInfoUpdated(const QVector<size_t> &info); // 转发信号
+
+public slots:
+    void startCurrentSceneAllControllers() { m_currentScene->startAllController(); }
+    void stopCurrentSceneAllControllers() { m_currentScene->stopAllController(); }
+    void resetCurrentSceneAllControllers() { m_currentScene->resetAllController(); }
 
 protected:
     void initializeGL() override;                  // 在Widget被显示前第一次调用，且只调用一次
@@ -47,8 +51,7 @@ private:
 
     InputController *m_inputController; // 使用一个inputController来处理鼠标和键盘事件
 
-public:
-    ShaderManager* m_shaderManager; // 统一管理所有Shader, 共享给下属的Scene和Object
+    ShaderManager* m_shaderManager; // 在这个类的初始化中创建ShaderManager的instance, 存放指针
 
 private:
     // -------------------
