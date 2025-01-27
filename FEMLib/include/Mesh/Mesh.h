@@ -47,4 +47,6 @@ int load_square(Mesh &m, const int subdiv);
 int load_hemisphere(Mesh &m, const int subdiv);
 void deduplicateVertices(Mesh &mesh);
 
+// TODO: 对网格进行正则化，使得三角形面积的边长类似
+
 NAMESPACE_END

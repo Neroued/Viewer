@@ -3,6 +3,7 @@
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
 #include <QString>
+#include <QStringList>
 #include <QSharedPointer>
 #include <QMap>
 #include <QElapsedTimer>
@@ -28,12 +29,14 @@ public:
 
 signals:
     void fpsUpdated(float fps);
-    void vertexAndFaceInfoUpdated(const QVector<size_t> &info); // 转发信号
+    void vertexAndFaceInfoUpdated(const QVector<size_t> info); // 转发信号
+    void sceneListUpdated(const QStringList sceneList);
 
 public slots:
     void startCurrentSceneAllControllers() { m_currentScene->startAllController(); }
     void stopCurrentSceneAllControllers() { m_currentScene->stopAllController(); }
     void resetCurrentSceneAllControllers() { m_currentScene->resetAllController(); }
+    void onChangeScene(const QString name) { changeScene(name); }
 
 protected:
     void initializeGL() override;                  // 在Widget被显示前第一次调用，且只调用一次

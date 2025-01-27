@@ -30,7 +30,7 @@ static double test_f(const VertexCoord *pos, double omega_0 = 1.0, double sigma 
 }
 
 NSController::NSController(int subdiv, MeshType type, QSharedPointer<Object> obj)
-    : m_solver(subdiv, type), m_obj(obj), m_running(false), m_updated(false)
+    : m_solver(subdiv, type), m_obj(obj), m_running(false), m_updated(false), m_dt(0.05), m_nu(std::pow(10, -2.0f))
 {
     initData();
     m_obj->setObjectType(ObjectType::FEM);
@@ -61,7 +61,6 @@ void NSController::reset()
         stopComputeThread();
         initData();
         m_colorBufferFront = generateColors(m_solver.Omega);
-        m_colorBufferBack = m_colorBufferFront;
         m_obj->setColorBuffer(m_colorBufferFront);
         startComputeThread();
     }
@@ -69,7 +68,6 @@ void NSController::reset()
     {
         initData();
         m_colorBufferFront = generateColors(m_solver.Omega);
-        m_colorBufferBack = m_colorBufferFront;
         m_obj->setColorBuffer(m_colorBufferFront);
     }
     m_updated = true;
@@ -77,12 +75,39 @@ void NSController::reset()
 
 void NSController::update(double dt)
 {
+    if (!m_updated)
+        return;
     std::lock_guard<std::mutex> lock(m_dataMutex);
     if (m_updated)
     {
         // 用前缓冲区更新对象颜色数据
         m_obj->setColorBuffer(m_colorBufferFront);
         m_updated = false; // 重置更新标志
+    }
+}
+
+void NSController::computeThread()
+{
+    while (m_running)
+    {
+        {
+            std::unique_lock<std::mutex> lock(m_dataMutex);
+
+            // 进行一次 Navier-Stokes 时间步推进
+            m_solver.timeStep(m_nu, m_dt);
+
+            // 根据新的涡量生成颜色缓冲区
+            m_colorBufferBack = generateColors(m_solver.Omega);
+
+            // 交换缓冲区（将后缓冲区数据拷贝到前缓冲区）
+            std::swap(m_colorBufferFront, m_colorBufferBack);
+
+            // 设置标记，表示颜色缓冲区已经更新
+            m_updated = true;
+        }
+
+        // 为了避免占用过多 CPU，这里稍微 sleep 一下
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 
@@ -93,40 +118,17 @@ void NSController::startComputeThread()
         return;
 
     m_running = true;
-    m_computeThread = std::thread([this]()
-                                  {
-        // 可以设定一些固定的时间步长或参数
-        double dt = 0.05; // 固定一个时间步
-        double nu = std::pow(10, -2.0f); // 粘性系数示例
-
-        while (m_running)
-        {
-            {
-                std::unique_lock<std::mutex> lock(m_dataMutex);
-
-                // 进行一次 Navier-Stokes 时间步推进
-                m_solver.timeStep(nu, dt);
-
-                // 根据新的涡量生成颜色缓冲区
-                m_colorBufferBack = generateColors(m_solver.Omega);
-
-                // 交换缓冲区（将后缓冲区数据拷贝到前缓冲区）
-                m_colorBufferFront = m_colorBufferBack;
-
-                // 设置标记，表示颜色缓冲区已经更新
-                m_updated = true;
-            }
-
-            // 为了避免占用过多 CPU，这里稍微 sleep 一下
-            // 也可以使用 condition_variable 来进行更精确的控制
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        } });
+    m_computeThread = std::thread(&NSController::computeThread, this);
 }
 
 void NSController::stopComputeThread()
 {
     // 将 running 标记为 false 并等待线程退出
+    if (!m_running)
+        return;
+        
     m_running = false;
+
     if (m_computeThread.joinable())
     {
         m_computeThread.join();

@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
     auto gl = mainWindow.getOpenGLWidget();
 
-    auto scene = QSharedPointer<Scene>::create();
+    auto scene = QSharedPointer<Scene>::create("scene 1");
     std::cout << "created scene" << std::endl;
 
     Mesh mesh(2, MeshType::SPHERE);
@@ -69,42 +69,42 @@ int main(int argc, char *argv[])
     std::uniform_real_distribution<float> scaleDis(0.1f, 0.3f);     // 随机缩放
     std::uniform_real_distribution<float> colorDis(0.0f, 1.0f);     // 随机颜色
 
-    Mesh mesh_alot(15, MeshType::SPHERE);
-    int n = 10;
-    for (int k = 0; k < n; ++k)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            for (int j = 0; j < n; ++j)
-            {
-                auto obj = QSharedPointer<Object>::create();
-                obj->setObjectType(ObjectType::STATIC);
-                obj->loadFromMesh(mesh_alot);
-                obj->setDrawMode(DrawMode::FILL);
-                obj->setShader("blinn_phong");
+    // Mesh mesh_alot(15, MeshType::SPHERE);
+    // int n = 10;
+    // for (int k = 0; k < n; ++k)
+    // {
+    //     for (int i = 0; i < n; ++i)
+    //     {
+    //         for (int j = 0; j < n; ++j)
+    //         {
+    //             auto obj = QSharedPointer<Object>::create();
+    //             obj->setObjectType(ObjectType::STATIC);
+    //             obj->loadFromMesh(mesh_alot);
+    //             obj->setDrawMode(DrawMode::FILL);
+    //             obj->setShader("blinn_phong");
 
-                // 随机缩放
-                float scaleVariation = scaleDis(gen);
-                obj->setScale({scaleVariation, scaleVariation, scaleVariation});
+    //             // 随机缩放
+    //             float scaleVariation = scaleDis(gen);
+    //             obj->setScale({scaleVariation, scaleVariation, scaleVariation});
 
-                // 随机位置偏移
-                float randomOffsetX = positionDis(gen);
-                float randomOffsetY = positionDis(gen);
-                float randomOffsetZ = positionDis(gen);
-                obj->setPosition(QVector3D((float)(i) + 4 + randomOffsetX,
-                                           (float)(j) + 4 + randomOffsetY,
-                                           2.0f + k + randomOffsetZ));
+    //             // 随机位置偏移
+    //             float randomOffsetX = positionDis(gen);
+    //             float randomOffsetY = positionDis(gen);
+    //             float randomOffsetZ = positionDis(gen);
+    //             obj->setPosition(QVector3D((float)(i) + 4 + randomOffsetX,
+    //                                        (float)(j) + 4 + randomOffsetY,
+    //                                        2.0f + k + randomOffsetZ));
 
-                // 随机颜色
-                float red = colorDis(gen) * 0.3f + 0.7f; // 偏蓝色调
-                float green = colorDis(gen) * 0.5f + 0.5f;
-                float blue = colorDis(gen) * 0.2f + 0.8f;
-                obj->setColorBuffer({red, green, blue});
+    //             // 随机颜色
+    //             float red = colorDis(gen) * 0.3f + 0.7f; // 偏蓝色调
+    //             float green = colorDis(gen) * 0.5f + 0.5f;
+    //             float blue = colorDis(gen) * 0.2f + 0.8f;
+    //             obj->setColorBuffer({red, green, blue});
 
-                scene->addObject(obj);
-            }
-        }
-    }
+    //             scene->addObject(obj);
+    //         }
+    //     }
+    // }
 
     // // 创建NS对象
     // auto obj3 = QSharedPointer<Object>::create();
@@ -206,6 +206,18 @@ int main(int argc, char *argv[])
     scene->addController(nsController5);
 
     gl->addScene(scene);
+
+    // 测试切换scene
+    auto scene2 = QSharedPointer<Scene>::create("Scene 2");
+
+    auto obj14 = QSharedPointer<Object>(new Object);
+    obj14->setShader("blinn_phong");
+    QSharedPointer<NSController> nsController6 = QSharedPointer<NSController>::create(50, MeshType::HEMI_SPHERE, obj14);
+    scene2->addObject(obj14);
+    scene2->addController(nsController6);
+
+    gl->addScene(scene2);
+
     gl->initializeScenes();
     return app.exec(); // 启动应用程序事件循环
 }

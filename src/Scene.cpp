@@ -118,6 +118,17 @@ void Scene::resetAllController()
     }
 }
 
+void Scene::activate()
+{
+    // 更新顶点与面数信息
+    sendVertexAndFaceInfo();
+}
+
+void Scene::deactivate()
+{
+    stopAllController();
+}
+
 // TODO: 重构绘制背景的部分，创建专门的类或继承Object
 void Scene::drawBackgroundAndGround(const QVector4D &skyColor, const QVector3D &groundColor)
 {

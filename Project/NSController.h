@@ -44,6 +44,7 @@ public:
 private:
     std::vector<float> generateColors(const FEMLib::Vec &u);
     void initData();
+    void computeThread();
     void startComputeThread();
     void stopComputeThread();
 };

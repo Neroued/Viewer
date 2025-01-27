@@ -38,4 +38,7 @@ void MainWindow::initLayout()
     connect(m_leftPanel, &LeftPanel::startControllers, m_openGLWidget, &OpenGLWidget::startCurrentSceneAllControllers);
     connect(m_leftPanel, &LeftPanel::stopControllers, m_openGLWidget, &OpenGLWidget::stopCurrentSceneAllControllers);
     connect(m_leftPanel, &LeftPanel::resetControllers, m_openGLWidget, &OpenGLWidget::resetCurrentSceneAllControllers);
+
+    connect(m_openGLWidget, &OpenGLWidget::sceneListUpdated, m_leftPanel, &LeftPanel::onSceneListUpdated); // 更新场景列表对应的按钮
+    connect(m_leftPanel, &LeftPanel::changeScene, m_openGLWidget, &OpenGLWidget::onChangeScene);
 }

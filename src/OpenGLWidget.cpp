@@ -53,6 +53,9 @@ void OpenGLWidget::addScene(QSharedPointer<Scene> &scene)
         {
             m_currentScene = scene;
         }
+
+        // 发送场景列表更新的信号
+        emit sceneListUpdated(m_scenes.keys());
     }
     else
     {
@@ -62,12 +65,17 @@ void OpenGLWidget::addScene(QSharedPointer<Scene> &scene)
 
 void OpenGLWidget::changeScene(const QString &name)
 {
-    // TODO: 需要在切换场景前停止上一个场景的一些计算
     auto it = m_scenes.find(name);
     if (it != m_scenes.end())
     {
+        // 将上一个场景变为不活跃状态
+        m_currentScene->deactivate();
+
+        // 切换到下一个场景
         m_currentScene = it.value();
-        setInputControllerCamera();
+        connect(m_currentScene.data(), &Scene::vertexAndFaceInfoUpdated, this, &OpenGLWidget::vertexAndFaceInfoUpdated); // 重新绑定信号
+        setInputControllerCamera();                                                                                      // 设置相机
+        m_currentScene->activate();
     }
 }
 

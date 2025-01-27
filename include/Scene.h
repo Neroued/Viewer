@@ -48,6 +48,10 @@ public:
     void stopAllController();
     void resetAllController();
 
+    // 更换场景相关
+    void activate();
+    void deactivate();
+
     // 获取相机
     Camera &getCamera() { return m_camera; }
 
@@ -57,7 +61,7 @@ public:
                                  const QVector3D &groundColor);
 
 signals:
-    void vertexAndFaceInfoUpdated(const QVector<size_t> &info);
+    void vertexAndFaceInfoUpdated(const QVector<size_t> info);
 
 public:
     QString m_sceneName;
