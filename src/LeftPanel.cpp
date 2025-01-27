@@ -43,11 +43,10 @@ void LeftPanel::setupUI()
 
     // 切换场景的按钮
     // 使用一个vbox存放
-    m_sceneButtonLayout = new QVBoxLayout(this);
+    m_sceneButtonLayout = new QVBoxLayout();
     m_layout->addLayout(m_sceneButtonLayout);
 
     m_layout->addStretch(); // 添加弹性空间
-    setLayout(m_layout);
 }
 
 // 槽函数，用于接收 FPS 数据
