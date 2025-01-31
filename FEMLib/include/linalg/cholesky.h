@@ -13,7 +13,8 @@ public:
     SKRMatrix L;
     SKRMatrix A;
     TArray<int> minElmIdx;
-    bool isInitialized;
+    bool attached = false;
+    bool isInitialized = false;
 
     Cholesky();
 

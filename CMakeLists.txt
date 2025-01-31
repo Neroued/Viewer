@@ -47,6 +47,8 @@ include_directories(Project/)
 # 需要头文件路径，用来添加Q_OBJECT宏
 qt_add_executable(Qttest ${SOURCES} ${HEADERS} ${RES_SOURCES} ${UI_FILE} tests/Qttest.cpp)
 qt_add_executable(MV ${SOURCES} ${HEADERS} ${RES_SOURCES} ${UI_FILE} tests/MV.cpp)
+qt_add_executable(Project ${SOURCES} ${HEADERS} ${RES_SOURCES} ${UI_FILE} Project/project.cpp)
+
 
 # 关闭终端输出窗口
 # set_target_properties(Qttest PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -76,6 +78,16 @@ target_link_libraries(MV PRIVATE
     OpenGL::GL
 )
 
+target_link_libraries(Project PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
+    FEMLib
+    OpenMP::OpenMP_CXX
+    OpenGL::GL
+)
 
 # ============ windeployqt 部署命令 =============
 set(QT_DEPLOY_TOOL E:/Qt/6.8.1/mingw_64/bin/windeployqt6.exe)
@@ -92,10 +104,16 @@ add_custom_command(
     COMMENT "Running windeployqt6.exe for MV"
 )
 
+add_custom_command(
+    TARGET Project POST_BUILD
+    COMMAND ${QT_DEPLOY_TOOL} --dir ${CMAKE_RUNTIME_OUTPUT_DIRECTORY} $<TARGET_FILE:Project>
+    COMMENT "Running windeployqt6.exe for Project"
+)
+
 
 
 # ============ install 部分 ============
-install(TARGETS Qttest MV
+install(TARGETS Qttest MV Project
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib

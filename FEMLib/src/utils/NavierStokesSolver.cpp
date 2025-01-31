@@ -19,7 +19,6 @@ NavierStokesSolver::NavierStokesSolver(int subdiv, MeshType meshtype)
     buildStiffnessMatrix(S);
     vol = M.elements.sum();
     cholesky.attach(S, 1e-10);
-    cholesky.compute();
 }
 
 void NavierStokesSolver::computeStream(int *iter)

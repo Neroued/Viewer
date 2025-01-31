@@ -2,7 +2,6 @@
 
 #include <QWidget>
 #include <QVector>
-#include "ui_LeftPanel.h"
 
 class QPushButton;
 class QLabel;
@@ -33,7 +32,6 @@ signals:
     void changeScene(const QString name);
 
 private:
-    Ui::Form m_ui;
     void setupUI();
 
     QVBoxLayout *m_layout;
